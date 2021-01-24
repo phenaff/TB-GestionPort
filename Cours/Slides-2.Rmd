@@ -1,0 +1,676 @@
+---
+title: "Modèle Moyenne-Variance et Extensions"
+author: "P. Hénaff"
+date: "2/2021"
+output:
+  beamer_presentation:
+    colortheme: dolphin
+    theme: Montpellier
+  slidy_presentation: default
+
+header-includes:
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{graphicx}
+  - \usepackage{subfig}
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{wrapfig}
+  - \usepackage{float}
+  - \usepackage{colortbl}
+  - \usepackage{pdflscape}
+  - \usepackage{tabu}
+  - \usepackage{threeparttable}
+  - \usepackage{threeparttablex}
+  - \usepackage[normalem]{ulem}
+  - \usepackage{makecell}
+  - \usepackage{xcolor}
+
+  
+bibliography: ../../library.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+```
+
+```{r load-libraries, include=FALSE, echo=FALSE}
+library(quantmod)
+library(xts)
+library(hornpa)
+library(lubridate)
+library(xtable)
+library(PerformanceAnalytics)
+library(TTR)
+library(SuppDists)
+library(lubridate)
+library(roll)
+library(Hmisc)
+library(nFactors)
+library(quadprog)
+library(knitr)
+library(kableExtra)
+library(latex2exp)
+
+get.src.folder <- function() {
+  path.expand("../GP/src")
+}
+
+get.data.folder <- function() {
+  path.expand("../GP/data")
+}
+
+source(file.path(get.src.folder(), 'utils.R'))
+source(file.path(get.src.folder(), 'FileUtils.R'))
+```
+
+## Optimisation de Portefeuille: Notation (1)
+
+* Rendement
+  $$
+  R_i \sim N(\mu_i, \sigma^2_i) 
+  $$
+  $$
+  \mbox{cov}(R_i, R_j) = \sigma_{i,j}
+  $$
+* Allocation exprimée en fraction de la richesse initiale 
+  $$
+  \sum_i w_i = 1
+  $$
+* Espérance de rendement du portefeuille
+  $$
+  w^T \mu = \mu_{p,w}
+  $$
+* Variance du portefeuille
+  $$
+  w^T \Sigma w = \sigma^2_{p,w}
+  $$
+  
+  
+## Optimisation de Portefeuille: Notation (2)
+
+* Distribution du rendement du portefeuille
+  $$
+  R_{p, w} \sim N(\mu_{p,w}, \sigma^2_{p,w})
+  $$
+* Covariance entre deux portefeuilles
+  $$
+  \mbox{cov}(R_{p,w_1}, R_{p,w_2}) = w_1^T \Sigma w_2
+  $$
+
+## Données
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE}
+daily.ret.file <- "./daily.ret.rda"
+tickers <- c("AAPL", "AMZN", "MSFT", "F", "SPY", "QQQ", "XOM", "MMM", "HD", "PG", "KO")
+if(!file.exists(daily.ret.file)) {
+daily.ret <- NULL
+for(t in tickers) {
+  p <- getSymbols(t, auto.assign = FALSE)
+  tmp <- Return.calculate(p[, 6])
+  colnames(tmp) <- t
+  if(is.null(daily.ret)) {
+    daily.ret <- tmp
+  } else {
+    daily.ret <- cbind(daily.ret, tmp)
+  }
+}
+daily.ret <- removeNA(daily.ret)
+save(daily.ret, file='daily.ret.rda')
+}
+load(daily.ret.file)
+```
+
+```{r}
+kable(table.Stats(daily.ret), "latex", booktabs=T) %>% kable_styling(latex_options="scale_down")
+```
+
+## Un portefeuille avec 2 actifs
+
+On choisit PG (faible vol) et AAPL (forte vol)
+
+```{r}
+assets <- c("PG", "AAPL")
+mom <- matrix(c(moments(daily.ret$PG)[1:2], moments(daily.ret$AAPL)[1:2]), ncol=2)
+mom[1,] <- mom[1,] * 252
+mom[2,] <- mom[2,] * sqrt(252)
+rho <- cor(daily.ret$PG, daily.ret$AAPL)
+colnames(mom) <- assets
+mom <- rbind(mom, c(rho, NA))
+rownames(mom) <- c("mu", "sigma", "rho")
+kable(mom, format="latex", booktabs=T)
+```
+## Rendement et Risque de deux actifs
+
+```{r, include=FALSE, echo=FALSE, warning=FALSE, message=FALSE, cache=TRUE}
+mu <- matrix(mom[1,],2,1)
+sigma <- matrix(mom[2,],2,1)
+rho <- cor(daily.ret[,assets])
+sig2 <- sigma %*% t(sigma) * rho
+sigma <- sqrt(diag(sig2))
+
+w <- matrix(c(0.5, 0.5),2,1)
+mu.p1 = t(mu) %*% w
+sig2.p1 = t(w) %*% sig2 %*% w
+sig.p1 = sqrt(sig2.p1)
+
+w <- matrix(c(-0.1, 1.1),2,1)
+mu.p2 = t(mu) %*% w
+sig2.p2 = t(w) %*% sig2 %*% w
+sig.p2 = sqrt(sig2.p2)
+```
+
+
+```{r, echo=FALSE}
+sigma.vals = c(sigma, sig.p1, sig.p2)
+mu.vals = c(mu, mu.p1, mu.p2)
+names(sigma.vals) = names(mu.vals) = c("PG", "AAPL", "P1= 50% AAPL + 50% PG", "P2 = 110% AAPL - 10% PG")
+plot(sigma.vals, mu.vals, bty='l',
+     xlab=expression(sigma), ylab=expression(mu), cex.lab=1.5,
+     xlim = c(0.1, 0.40), ylim = c(0, 0.50),
+     pch=20, col="blue")
+text(sigma.vals, mu.vals, labels=names(mu.vals), cex=0.7,pos=c(2,2,3,3))
+slope = diff(mu)/diff(sigma)
+intercept = mu[1] - slope*sigma[1]
+abline(a=intercept, b=slope, lwd=2, col='red', lty="dotted")
+```
+
+## Frontière de deux actifs
+
+
+```{r, echo=FALSE}
+alpha <- seq(from=-0.4, to=1.4, by=0.1)
+w_1 <- matrix(c(0.0, 1.0),2,1)
+w_2 <- 1 - w_1
+w <- w_1 %*% alpha + w_2 %*% (1-alpha)
+
+mu.frontier <- as.vector(t(mu) %*% w)
+sigma.frontier <- sqrt(diag(t(w) %*% sig2 %*% w))
+```
+
+```{r}
+# plot portfolio frontier
+
+plot(sigma.frontier, mu.frontier, type="b", pch=20, cex = 1,
+     ylim=c(0, max(mu.frontier)), xlim=c(0.1, max(sigma.frontier)),
+     xlab=expression(sigma), ylab=expression(mu), cex.lab=1.5,
+     col=c(rep("green", 4), "black", rep("green", 9), "black", rep("green", 4)), bty='n')
+text(x=sigma, y=mu, labels=c("PG", "AAPL"), pos=4, cex = 1)
+text(x=sigma.frontier[1], y=mu.frontier[1], labels="(1.4, -0.4)", pos=4)
+text(x=tail(sigma.frontier,1), y=tail(mu.frontier,1), labels="(-0.4, 1.4)", pos=2)
+
+```
+
+## Calcul du Portefeuille de Variance Minimale (1)
+
+::: columns
+
+:::: column
+$$
+\begin{aligned}
+    \mbox{min}\ \  & w^T \Sigma w \\
+    \mbox{s.t.} & \\
+    & \mathbf{1}^T w  = 1
+\end{aligned}
+$$
+::::
+
+:::: column
+::::
+
+:::
+
+## Solution Analytique
+
+::: columns
+
+:::: column
+```{r, min-var-analytique, echo=TRUE, size='tiny'}
+n <- 2
+A.mat <- matrix(rep(1,n), ncol=1)
+w.min <- solve(2*sig2, A.mat)
+w.min <- w.min / sum(w.min)
+names(w.min) <- assets
+
+```
+::::
+
+:::: column
+```{r, min-var-analytique-2}
+kable(w.min, "latex", booktabs=T)
+```
+::::
+
+:::
+
+## Utilisation de solve.QP - Solution Numérique 
+
+::: columns
+
+:::: column
+```{r, min-var-num, echo=TRUE, size='tiny'}
+A.mat <- matrix(1, nrow=2, ncol=1)
+b <- 1
+sol <- solve.QP(2*sig2, rep(0,2), 
+                A.mat, b, meq=1)
+w.min <- sol$solution
+names(w.min) <- assets
+```
+::::
+
+:::: column
+
+```{r, min-var-num-2}
+kable(w.min, "latex", booktabs=T)
+```
+::::
+
+:::
+
+## Portefeuille de Variance Minimale (2)
+
+
+```{r, echo=FALSE}
+mu.min <- as.vector(t(mu) %*% w.min)
+sigma.min <- sqrt(diag(t(w.min) %*% sig2 %*% w.min))
+
+plot(sigma.frontier, mu.frontier, type="b", pch=20, cex = 1,
+     ylim=c(0, max(mu.frontier)), xlim=c(0.1, max(sigma.frontier)),
+     xlab=expression(sigma), ylab=expression(mu), cex.lab=1.5,
+     col=c(rep("green", 4), "black", rep("green", 9), "black", rep("green", 4)), bty='n')
+text(x=sigma, y=mu, labels=assets, pos=4, cex = 1)
+text(x=sigma.frontier[1], y=mu.frontier[1], labels="(1.4, -0.4)", pos=4)
+text(x=sigma.min, y=mu.min, labels=paste("Min Var \n", "(", round(w.min[1],2), ",", round(w.min[2],2), ")"), pos=2)
+```
+
+
+## Frontière en fonction de la corrélation
+
+```{r, echo=FALSE}
+# frontier line for one rho
+get.frontier <- function(rho) {
+  Rho <- matrix(c(1.0, rho, rho, 1.0), 2, 2)
+  sig2 <- sigma %*% t(sigma) * Rho
+
+mu <- as.vector(t(mu) %*% w)
+sigma <- sqrt(diag(t(w) %*% sig2 %*% w))
+list(mu=mu, sigma=sigma)
+}
+
+rho.v = c(-0.9,-0.5, -0.25, 0, 0.25, 0.5, 0.9)
+
+cex.val = 1.5
+res <- get.frontier(rho.v[1])
+plot(res$sigma, res$mu, type="l", pch=20, cex = cex.val,
+     ylim=c(0, max(mu.frontier)), xlim=c(0, max(sigma.frontier)),
+     xlab=expression(sigma), ylab=expression(mu),
+     cex.lab = cex.val, col=1)
+text(x=sigma, y=mu, labels=assets, pos=4, cex = 1)
+
+for (i in 2:length(rho.v)) {
+  res <- get.frontier(rho.v[i])
+  points(res$sigma, res$mu, type="l", pch=20, col=i, cex=cex.val)
+}
+legend(x="bottomright", legend=as.character(rho.v), 
+       col=1:length(rho.v), lty=1, cex = 1)
+```
+
+## Modèle de Markowitz
+
+::: columns
+
+:::: column
+$$
+\begin{aligned}
+    \mbox{min}\ \  &  w^T \Sigma w \\
+    \mbox{s.t.} & \\
+    & \mu^T w = \mu^* \\
+    & \mathbf{1}^T w  = 1
+\end{aligned}
+$$
+::::
+
+:::: column
+```{r, echo=FALSE}
+mu.min <- as.vector(t(mu) %*% w.min)
+sigma.min <- sqrt(diag(t(w.min) %*% sig2 %*% w.min))
+
+plot(sigma.frontier, mu.frontier, type="b", pch=20, cex = 1,
+     ylim=c(0, max(mu.frontier)), xlim=c(0.1, max(sigma.frontier)),
+     xlab=expression(sigma), ylab=expression(mu), cex.lab=1.5,
+     col=c(rep("green", 4), "black", rep("green", 9), "black", rep("green", 4)), bty='n')
+text(x=sigma, y=mu, labels=assets, pos=4, cex = 1)
+text(x=sigma.frontier[1], y=mu.frontier[1], labels="(1.4, -0.4)", pos=4)
+abline(h=0.2, lty=2, col='red')
+text(x=0.11, y=0.2, labels=TeX("$\\mu^*$"), pos=3, offset=.5, cex=2)
+```
+::::
+  
+:::
+
+## Modèle de Markowitz - Solution Analytique
+
+## Théorème de Séparation
+
+
+## Utilisation dans l'industrie
+
+```{r quantalys, echo=FALSE, fig.cap="Diagramme Moyenne / Ecart Type (www.quantalys.com)", out.width = '100%'}
+knitr::include_graphics("Quantalys.png")
+```
+
+## Ajout d'un actif sans risque (1)
+
+```{r, tangent-1}
+# Risk-free rate
+r.f = 0.03
+
+# by formula
+mu <- matrix(mom[1,],2,1)
+sigma <- matrix(mom[2,],2,1)
+rho <- cor(daily.ret[,assets])
+sig2 <- sigma %*% t(sigma) * rho
+w.nom <- solve(sig2, mu-r.f)
+w.den <- sum(w.nom)
+w.t <- w.nom/sum(w.nom)
+
+mu.t <- as.vector(t(mu) %*% w.t)
+sigma.t <- sqrt(t(w.t) %*% sig2 %*% w.t)
+
+plot(sigma.frontier, mu.frontier, type="b", pch=1, cex = .7,
+     ylim=c(0, max(mu.frontier)), xlim=c(0, max(sigma.frontier)),
+     xlab=expression(sigma), ylab=expression(mu), cex.lab = cex.val, bty='n')
+text(x=0.0, y=r.f, labels=expression(r[f]), pos=2, offset=0)
+text(x=sigma, y=mu, labels=assets, pos=4, cex = 1)
+segments(0, r.f, sigma.frontier[7], mu.frontier[7], col='red', lty=2, lwd=3)
+```
+
+
+## Ajout d'un actif sans risque (2)
+
+
+
+## Ajout d'un actif sans risque (2)
+
+
+## Portefeuille Tangent (1)
+
+::: columns
+:::: column
+Portefeuille sur la frontière efficiente qui maximise le ratio de Sharpe:
+$$
+\begin{aligned}
+    \mbox{max}_w \ \  &  \frac{w^T \mu - r_f}{(w^T \Sigma w)^{\frac{1}{2}}} \\
+    \mbox{s.t.} & \\
+    & \mathbf{1}^T w  = 1
+\end{aligned}
+$$
+Solution:
+$$
+w = \frac{\Sigma^{-1}(\mu - r_f  \mathbf{1})}{\mathbf{1}^T\Sigma^{-1}(\mu - r_f \mathbf{1})}
+$$
+::::
+
+:::: column
+```{r, tangent-2}
+# Risk-free rate
+r.f = 0.03
+
+# by formula
+mu <- matrix(mom[1,],2,1)
+sigma <- matrix(mom[2,],2,1)
+rho <- cor(daily.ret[,assets])
+sig2 <- sigma %*% t(sigma) * rho
+w.nom <- solve(sig2, mu-r.f)
+w.den <- sum(w.nom)
+w.t <- w.nom/sum(w.nom)
+
+mu.t <- as.vector(t(mu) %*% w.t)
+sigma.t <- sqrt(t(w.t) %*% sig2 %*% w.t)
+
+plot(sigma.frontier, mu.frontier, type="b", pch=1, cex = .7,
+     ylim=c(0, max(mu.frontier)), xlim=c(0, max(sigma.frontier)),
+     xlab=expression(sigma), ylab=expression(mu), cex.lab = cex.val, bty='n')
+text(x=0.0, y=r.f, labels=expression(r[f]), pos=2, offset=0)
+text(x=sigma, y=mu, labels=assets, pos=4, cex = 1)
+text(x=sigma.t, y=mu.t, labels="Tangency", pos=2, offset=2)
+abline(a=r.f, b=(mu.t-r.f)/sigma.t, col='red', lty=2)
+```
+::::
+:::
+
+## Multiple assets - Mean/Variance Optimization
+
+$$
+\begin{aligned}
+    \mbox{min\ \ } & w^T \Sigma w  \\
+    \mbox{s.t.} & \\
+    & w^T r  = r^* \\
+    & w^T 1 = 1 \\
+  \end{aligned}
+$$
+
+## Mean/Variance Optimization Workflow
+
+* Compute expected return and covariance matrix
+* Define additional linear constraints
+* Set up QP problem and solve
+* Vary $r^*$ to draw efficient frontier and tangent portfolio
+* Choose allocation mix as a function of risk tolerance
+
+
+## Mean/Variance Optimization - with Basic R (1)
+
+
+```{r, echo=TRUE}
+idx <- (time(daily.ret) >= dmy("01jan2014")) &
+  (time(daily.ret) <= dmy("01jan2016")) 
+ret <- daily.ret[idx,]
+# covariance matrix
+Sigma <- cov(ret) * 252
+# expected return
+mu <- colMeans(ret) * 252
+```
+
+## Portefeuille à Variance Minimale (1)
+
+```{r, echo=TRUE}
+A.mat <- matrix(rep(1,length(mu)), ncol=1)
+b <- 1
+qp <- solve.QP(2*Sigma, mu*0, A.mat, b, meq=1)
+```
+
+## Portefeuille à Variance Minimale (2)
+
+```{r}
+w <- qp$solution
+names(w) <- names(ret)
+w <- data.frame(w)
+names(w) = "allocation"
+
+min.ret <- sum(qp$solution * mu)
+x <- matrix(c(min.ret, sqrt(qp$value)), ncol=1)
+rownames(x) <- c("return", "stdev")
+x = data.frame(x)
+names(x) = "Min Var Portfolio"
+
+kable(list(w, x), "latex", booktabs=T)
+```
+
+
+
+## Frontière 
+
+$$
+\begin{aligned}
+    \mbox{min}\ \  &  w^T \Sigma w \\
+    \mbox{s.t.} & \\
+    & \mu^T w = \mu^* \\
+    & \mathbf{1}^T w  = 1
+\end{aligned}
+$$
+
+## Calcul de la Frontière (Long/Short)
+
+```{r, echo=FALSE}
+
+
+mu.star <- seq(from=min.ret+abs(min(mu))/100, to=2*max(mu)-abs(max(mu))/100, length.out=100)
+mu.free <- 0.03
+
+sol <- NULL
+for(mu.s in mu.star) {
+  
+# constraints: 2 equality
+A.sum <- matrix(rep(1,length(mu)), ncol=1)
+A.mat <- cbind(A.sum, mu)
+b <- c(1, mu.s)
+qp <- solve.QP(2*Sigma, rep(0,length(mu)), A.mat, b, meq=2)
+sharpe <- (mu.s - mu.free) / sqrt(qp$value)
+  tmp <- matrix(c(mu.s, sqrt(qp$value), sharpe, qp$solution), nrow=1)
+
+if(is.null(sol)) {
+  sol <- tmp  
+} else {
+  sol <- rbind(sol, tmp)
+}
+}
+colnames(sol) <- c("mu", "stdev", "Sharpe", tickers)
+```
+
+```{r, echo=FALSE, fig.height=6}
+plot(sol[,"stdev"], sol[,"mu"], type='l', col='red', lwd=2, xlab=expression(sigma), ylab=expression(mu),
+     ylim=c(0, 0.40), xlim=c(.0, 0.40), bty='n', cex.lab=1.5)
+
+for(i in seq_along(tickers)) {
+  text(sqrt(Sigma[i,i]), mu[i], tickers[i], cex=1.2, col="blue")
+}
+```
+
+## Allocation en fonction du risque
+
+```{r, echo=FALSE, fig.height=6}
+chart.StackedBar(sol[, 3+seq_along(mu)], xaxis.labels=round(sol[,2],2), 
+                 xlab="SD Portefeuille", ylab="Allocation")
+```
+
+## Calcul de la Frontière (Long)
+
+```{r, echo=FALSE}
+
+
+mu.star <- seq(from=min.ret+abs(min(mu))/100, to=max(mu)-abs(max(mu))/100, length.out=200)
+mu.free <- 0.03
+
+sol <- NULL
+for(mu.s in mu.star) {
+  
+# constraints: 2 equality
+A.sum <- matrix(rep(1,length(mu)), ncol=1)
+A.mat <- cbind(A.sum, mu, diag(length(mu)))
+b <- c(1, mu.s, rep(0, length(mu)))
+qp <- solve.QP(2*Sigma, rep(0,length(mu)), A.mat, b, meq=2)
+sharpe <- (mu.s - mu.free) / sqrt(qp$value)
+  tmp <- matrix(c(mu.s, sqrt(qp$value), sharpe, qp$solution), nrow=1)
+
+if(is.null(sol)) {
+  sol <- tmp  
+} else {
+  sol <- rbind(sol, tmp)
+}
+}
+colnames(sol) <- c("mu", "stdev", "Sharpe", tickers)
+
+```
+
+```{r, echo=FALSE, fig.height=6}
+plot(sol[,"stdev"], sol[,"mu"], type='l', col='red', lwd=2, xlab=expression(sigma), ylab=expression(mu),
+     ylim=c(0, 0.40), xlim=c(.0, 0.40), cex.lab=1.5, bty='n')
+
+for(i in seq_along(tickers)) {
+  text(sqrt(Sigma[i,i]), mu[i], tickers[i], cex=1.2, col="blue")
+}
+```
+
+## Allocation le long de la Frontière
+
+```{r, echo=F, fig.height=6}
+chart.StackedBar(sol[, 3+seq_along(mu)], xaxis.labels=round(sol[,"stdev"],2), 
+                 xlab="SD Portefeuille", ylab="Allocation")
+```
+
+## Ajout d'un actif sans risque
+
+```{r, tangent-long}
+
+mu.star.v  <- seq(from=mu.free, to=0.35, length.out=30)
+n <- length(mu)
+
+# constraints: 1 equality
+optim.with.rf <- function(mu.star) {
+  A.sum <- matrix(mu-mu.free, ncol=1)
+A.mat <- cbind(A.sum, 
+               rep(1, n),
+               diag(n),
+               -diag(n))
+b <- c(mu.star-r.f, 0, rep(0, n), rep(-1, n))
+solve.QP(2*Sigma, rep(0,n), A.mat, b, meq=1)
+}
+
+sol.with.rf <- NULL
+for(mu.star in mu.star.v) {
+  qp <- optim.with.rf(mu.star)
+
+  sharpe <- (mu.star - mu.free) / sqrt(qp$value)
+  tmp <- matrix(c(mu.star, sqrt(qp$value), sharpe, qp$solution), nrow=1)
+
+if(is.null(sol.with.rf)) {
+  sol.with.rf <- tmp  
+} else {
+  sol.with.rf <- rbind(sol.with.rf, tmp)
+}
+}
+
+# tangency portfolio
+w.tangent <- matrix(qp$solution / sum(qp$solution), ncol=1)
+names(w.tangent) <- tickers
+sigma.tangent <- sqrt(t(w.tangent) %*% Sigma %*% w.tangent)
+
+colnames(sol.with.rf) <- c("mu", "stdev", "Sharpe", tickers)
+```
+
+```{r, echo=FALSE, fig.height=6}
+plot(sol[,"stdev"], sol[,"mu"], type='l', col='red', lwd=2, xlab=expression(sigma), ylab=expression(mu),
+     ylim=c(0, 0.40), xlim=c(.0, 0.40), bty='n', cex.lab=1.5)
+lines(sol.with.rf[,"stdev"], sol.with.rf[,"mu"], type='l', col='green', lwd=2)
+for(i in seq_along(tickers)) {
+  text(sqrt(Sigma[i,i]), mu[i], tickers[i], cex=1.2, col="blue")
+}
+```
+
+## Portefeuille Tangent (long) - Solution Numérique
+
+
+
+## Allocation le long de la droite de marché
+
+```{r, echo=F, fig.height=6}
+# add cash position
+
+cash <- 1-rowSums(sol.with.rf[,3+seq_along(mu)])
+alloc <- cbind(cash, sol.with.rf[,3+seq_along(mu)] )
+
+chart.StackedBar(alloc, xaxis.labels=round(sol.with.rf[,"stdev"],2), 
+                 xlab="SD Portefeuille", ylab="Allocation")
+```
+
+
+## Bibliographie
+
+Grinhold, R.C. and Kahn, R. Active Portfolio Management, Mc Graw-Hill, 2000

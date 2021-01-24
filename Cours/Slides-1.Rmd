@@ -1,0 +1,406 @@
+---
+title: "Financial Time Series"
+author: "P. Hénaff"
+date: "Feb 2021"
+output:
+  beamer_presentation:
+    colortheme: dolphin
+    theme: Montpellier
+  ioslides_presentation: default
+  slidy_presentation: default
+header-includes:
+- \usepackage[utf8]{inputenc}
+- \usepackage{booktabs}
+- \usepackage{longtable}
+- \usepackage{array}
+- \usepackage{multirow}
+- \usepackage{wrapfig}
+- \usepackage{float}
+- \usepackage{colortbl}
+- \usepackage{pdflscape}
+- \usepackage{tabu}
+- \usepackage{threeparttable}
+- \usepackage{threeparttablex}
+- \usepackage[normalem]{ulem}
+- \usepackage{makecell}
+- \usepackage{xcolor}
+
+bibliography: ../../library.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r load-libraries, include=FALSE}
+library(quantmod)
+library(xts)
+library(hornpa)
+library(lubridate)
+library(xtable)
+library(PerformanceAnalytics)
+library(TTR)
+library(SuppDists)
+library(roll)
+library(Hmisc)
+library(nFactors)
+library(kableExtra)
+library(latex2exp)
+
+get.src.folder <- function() {
+  path.expand("../GP/src")
+}
+
+get.data.folder <- function() {
+  path.expand("../GP/data")
+}
+
+source(file.path(get.src.folder(), 'utils.R'))
+source(file.path(get.src.folder(), 'FileUtils.R'))
+source(file.path(get.src.folder(), 'PowerLawUtils.R'))
+```
+
+## Financial Time Series (daily OHLC)
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, include=FALSE}
+price.series.file <- "./price.series.slides.1.rda"
+get.prices<-function(sym, from="2004-12-31"){
+  prices<-getSymbols(sym, from, auto.assign=FALSE)
+  p<-Ad(prices)
+  colnames(p) <- sym
+  list(OHLC=prices, AC=p)
+}
+
+symbols <- c("AMZN", "GOOG", "AAPL", "QQQ", "DIA", "SPY", "PG", "KO")
+
+if(!file.exists(price.series.file)) {
+  
+  price_series <- NULL
+  quotes <- vector("list", length(symbols))
+  i <- 1
+  for(s in symbols) {
+    res <- get.prices(s)
+    if(is.null(price_series)) {
+      price_series <- res$AC
+    } else {
+      price_series <- merge.xts(price_series, res$AC)
+    }
+    quotes[[i]] <- res$OHLC
+    i <- i + 1
+  }
+  names(quotes) <- symbols
+  save(price_series, quotes, file=price.series.file)
+} else {
+  load(price.series.file)
+}
+```
+
+```{r, fig.height=5, warning=FALSE, message=FALSE}
+p <- quotes$AMZN['2004-12-31/']
+
+chartSeries(p[100:110,], type="bars")
+```
+
+## Daily Return - AMZN
+
+\[
+r_t = \log\left(\frac{P_t}{P_{t-1}}\right)
+\]
+
+```{r daily-return, include=FALSE, echo=FALSE}
+return_series <- ROC(price_series, n=1, na.pad=FALSE)
+```
+
+```{r plot-return, fig.height=5}
+plot(return_series$AMZN, col="red", main = "Daily return")
+```
+
+## Histogram of daily return - AMZN
+
+```{r, ret-hist, echo=FALSE, fig.height=5}
+r <- return_series$AMZN
+r <- r[!is.na(r)]
+hist(r, breaks=40, freq=FALSE, main='')
+rug(r)
+curve(dnorm(x, mean=mean(r), sd=sd(r)), add=TRUE, col='red', lwd=3, xaxt='n')
+```
+
+
+## Analysis of return distribution - AMZN
+
+```{r, qqplot-normal, echo=FALSE, fig.height=5}
+qqnorm(as.vector(r),main=NULL)
+qqline(as.vector(r),col='red', lwd=2)
+```
+
+
+## Moments of daily returns
+
+```{r, ret-moments, echo=FALSE}
+statNames <- c("mean", "std dev", "skewness", "kurtosis")
+mo <- matrix(NA, nrow=length(symbols), ncol=length(statNames))
+n <- 1
+for(s in symbols) {
+  ts <- return_series[, s]
+  mo[n,] <- c(mean(ts), sd(ts), skewness(ts), kurtosis(ts))
+  n <- n+1
+}
+
+colnames(mo) <- statNames
+rownames(mo) <- symbols
+
+kable(mo, "latex", booktabs=T)
+```
+
+
+## Rescaling daily return by $\sigma(r_{t-1})$ [@Chen-2008]
+
+$$
+z_t = \frac{r_t}{\sigma(r_{t-1})}
+$$
+$$
+\left.\begin{aligned}
+p(z_t) & = \frac{\alpha-1}{z_{min}} \left(\frac{z_t}{z_{min}} \right)^{-\alpha} \\
+Pr(z_t > x) & = \left(\frac{z_t}{z_{min}} \right)^{-\alpha+1}
+\end{aligned}
+\right\} z_t > z_{min}
+$$
+
+The density of $z_t$ can be approximated by a power law.
+
+## Rescaling of daily return by $\sigma(r_{t-1})$
+
+```{r, powerlaw-1, echo=FALSE, warning=FALSE, message=FALSE, fig.height=6, fig.align="center"}
+
+nb <- 8
+params = list(lambda=0.94, nb.init=250)
+ticker <- 'AMZN'
+plot.cum.cond.r(r=r, ticker = ticker, sgn='all',NBIN=nb, model='abs', params=params)
+```
+
+## Rescaling of positive daily return by $\sigma(r_{t-1})$
+
+```{r, powerlaw-2, echo=FALSE, message=FALSE, fig.height=6, fig.align="center"}
+plot.cum.cond.r(r=r, ticker=ticker, sgn='pos',NBIN=nb)
+```
+
+## Rescaling of negative daily return by $\sigma(r_{t-1})$
+
+```{r, powerlaw-3, echo=FALSE, warning=FALSE, message=FALSE, fig.height=6, fig.align="center"}
+plot.cum.cond.r(r=r, ticker=ticker, sgn='neg',NBIN=nb)
+```
+
+## Unconditional distribution of return
+
+The Johnson family of distributions is formed by various transformations
+of the normal density. Let $X$ be the observed data, an define $Z$ by:
+
+$$Z = \gamma + \delta \ln \left( g \left( \frac{x-\xi}{\lambda} \right) \right)$$
+
+where: $$g(u) = \left\{ \begin{array}{ll}
+u & SL \\
+u + \sqrt{1+u^2} & SU\\
+\frac{u}{1-u} & SB \\
+e^u & SN
+\end{array} \right.$$
+
+$X$ follows a Johnson distribution if $Z$ is normal.
+
+## Fitted Johnson SU distribution - AMZN (1)
+
+```{r, johnson-1, label=JohnsonFit, echo=FALSE}
+johnson.fit <- JohnsonFit(r)
+kable(as.data.frame(johnson.fit), "latex", booktabs=TRUE) %>% kable_styling(position="center")
+```
+
+
+```{r, johnson-2, label=empirical-vs-fitted, echo=F}
+m1 <- moments(r)
+st <- sJohnson(johnson.fit)
+m2 = c(st$Mean, sqrt(st$Variance), st$Skewness, st$Kurtosis)
+df.stats <- data.frame(cbind(sample=m1, johnson=m2))
+kable(df.stats, "latex", booktabs=TRUE) %>% kable_styling(position="center")
+```
+
+## Fitted Johnson SU distribution - AMZN (2)
+
+```{r, johnson-3, echo=FALSE, fig.height=6}
+pp3 <- function(x) format(x, scientific=TRUE, digits=3)  
+
+t2 = substitute(paste(
+  gamma, ": ", g, " ",
+  delta, ": ", d, " ",
+  xi, ": ", x, " ",
+  lambda, ": ", l), list(g=pp3(johnson.fit$gamma), d=pp3(johnson.fit$delta),
+                         x=pp3(johnson.fit$xi), l=pp3(johnson.fit$lambda)))
+
+hist(r,freq=FALSE,breaks=40, main=t2)
+plot(function(x)dJohnson(x,johnson.fit),-.1,.1,col='red', lwd=3,add=TRUE)
+```
+
+
+## Fitted Johnson SU distribution - AMZN (3)
+
+```{r, johnson-3, label=qq-johnson, echo=FALSE, fig.height=6}
+# QQ plot with johnson distribution
+qqJohnson <- function(y, params, n=100, abline=TRUE, ...) {
+  u <- seq(from=1/(n+1), by=1/(n+1), length=n)
+  q <- qJohnson(u, params)
+  if (abline) {
+    ret <- qqplot(q, as.vector(y), ...)
+    abline(0,1)
+  }
+  else {
+    ret <- qqplot(q, as.vector(y), ...)
+  }
+  invisible(ret)
+}
+
+op <- par(mfrow=c(1,2))
+qqJohnson(r, johnson.fit, main="Johnson SU")
+qqnorm(r, main="Normal")
+qqline(r)
+par(op)
+```
+
+
+## Autocorrelation of Returns
+
+
+```{r, label=autocor, echo=FALSE, fig.height=5}
+op <- par(mfrow=c(1,2))
+acf(r, ylim=c(0, .6), main='autocorrelation of r(t)')
+acf(abs(r), ylim=c(0, .6), main='autocorrelation of |r(t)|')
+par(op)
+```
+
+## Correlation between assets
+
+```{r, cor-1, echo=FALSE, cache=FALSE, warning=FALSE, message=FALSE, cache=TRUE} 
+## NASDAQ
+folder <- 'NASDAQ'
+tickers <- get.tickers(folder)[1:150]
+ts.all <- get.all.ts(folder, tickers, dt.start = dmy('01Mar2007'), combine = TRUE)
+```
+
+```{r, cor-2, echo=FALSE}
+nb.ev = 6
+nb.obs <- 252
+
+dt.start <- dmy("01Aug2009")
+idx.start <- closest.index(ts.all, dt.start)
+idx <- seq(idx.start, length.out=nb.obs)
+
+res.pca.1 <- prcomp(ts.all[idx,], scale=TRUE)
+
+# normalized eigenvalues
+norm.ev <- res.pca.1$sdev^2
+norm.ev <- norm.ev/sum(norm.ev)
+
+large.ev.1 <- norm.ev[1:nb.ev]
+names(large.ev.1) <- paste("PC", seq_along(large.ev.1))
+
+dt.start <- dmy("01Aug2012")
+idx.start <- closest.index(ts.all, dt.start)
+idx <- seq(idx.start, length.out=nb.obs)
+
+res.pca.2 <- prcomp(ts.all[idx,], scale=TRUE)
+
+# normalized eigenvalues
+norm.ev <- res.pca.2$sdev^2
+norm.ev <- norm.ev/sum(norm.ev)
+
+large.ev.2 <- norm.ev[1:nb.ev]
+names(large.ev.2) <- paste("PC", seq_along(large.ev.2))
+```
+
+```{r, cor-3, echo=FALSE, fig.height=5}
+plot.1 <- barplot(100*large.ev.1, ylim=c(0,60), col="blue", ylab="Contribution (%)",
+                  main="First PCs of 150 NASDAQ stocks, August 2009")
+lines(plot.1, 100*cumsum(large.ev.1), type='b', pch=5, col="red", lty=2)
+legend("right", legend=c("Contribution ratio", "cumulative contribution"),
+       col=c("blue", "red", "green"), lty=1:3, cex=0.8) 
+```
+
+## Correlation between assets
+
+```{r, cor-4, echo=FALSE, fig.height=5}
+plot.2 <- barplot(100*large.ev.2, ylim=c(0,60), col="blue", ylab="Contribution (%)",
+                  main="First PCs of 150 NASDAQ stocks, August 2012")
+lines(plot.2, 100*cumsum(large.ev.2), type='b', pch=5, col="red", lty=2)
+legend("right", legend=c("Contribution ratio", "cumulative contribution"),
+       col=c("blue", "red"), lty=1:2, cex=0.8) 
+```
+
+## How many dimensions in a market?
+
+Significance level (95%) for eigenvalues (252 observations, 127 variables):
+
+
+```{r, cor-5, fig.height=5, warning=FALSE}
+dt.start <- dmy("01Aug2009")
+idx.start <- closest.index(ts.all, dt.start)
+idx <- seq(idx.start, length.out=nb.obs)
+
+ev <- eigen(cor(ts.all[idx,]))
+ap <- parallel(subject=length(idx), var=ncol(ts.all), rep=200, cent=0.05)
+
+ev <- eigen(cor(ts.all[idx,])) # get eigenvalues
+ap <- parallel(subject=length(idx),var=ncol(ts.all),
+               rep=200,cent=.05)
+
+y <- ev$values[1:8]
+names(y) <- paste("PC", seq_along(y))
+
+gp <- gap.plot.helper(seq_along(y), y, from=4, to=52, ylim=c(0, 60), col="blue", xlab="PC", 
+                      ylab="value", main="NASDAQ Eigenvalues (150 stocks) - 01 Aug 2009")
+lines(seq_along(y), ap$eigen$qevpea[1:8], col="red")
+legend("right", legend=c("Eigenvalue", "Significance level"), col=c("blue", "red"), 
+       lty=c(NA, 1), pch=c(1, NA))
+minor.tick(ny=2)
+
+```
+
+## How many dimensions in a market?
+
+```{r, cor-6, fig.height=5, warning=FALSE}
+dt.start <- dmy("01Aug2012")
+idx.start <- closest.index(ts.all, dt.start)
+idx <- seq(idx.start, length.out=nb.obs)
+
+ev <- eigen(cor(ts.all[idx,]))
+ap <- parallel(subject=length(idx), var=ncol(ts.all), rep=200, cent=0.05)
+
+ev <- eigen(cor(ts.all[idx,])) # get eigenvalues
+ap <- parallel(subject=length(idx),var=ncol(ts.all),
+               rep=200,cent=.05)
+
+y <- ev$values[1:8]
+names(y) <- paste("PC", seq_along(y))
+
+gp <- gap.plot.helper(seq_along(y), y, from=5, to=30, ylim=c(0, 40), col="blue", xlab="PC", 
+                      ylab="Eigenvalue", main="NASDAQ Eigenvalues (150 stocks) - 01 Aug 2013")
+lines(seq_along(y), ap$eigen$qevpea[1:8], col="red")
+legend("right", legend=c("Eigenvalue", "Significance level"), col=c("blue", "red"), 
+       lty=c(NA, 1), pch=c(1, NA))
+minor.tick(ny=2)
+```
+
+## Summary
+
+To summarize, empirical observations show that the distribution of
+returns exhibit features that strongly repart from the classical
+hypothesis of independence and normality. We find:
+
+1.  no evidence of linear autocorrelation of return, however,
+
+2.  there is an observable autocorrelation of $|r_t|$ and $r_t^2$,
+suggesting autocorrelation in the volatility of return,
+
+3.  we also observe large excess kurtosis, which is incompatible with
+normal density,
+
+4.  The rank of a broad stock market such as the NASDAQ is probably much lower than the number of stocks.
+
+
+## Bibliography

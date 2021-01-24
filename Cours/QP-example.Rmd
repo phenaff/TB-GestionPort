@@ -1,0 +1,90 @@
+---
+title: "QP Example"
+author: "P. Hénaff"
+date: "2/2021"
+output:
+  beamer_presentation:
+    colortheme: dolphin
+    theme: Montpellier
+  slidy_presentation: default
+
+header-includes:
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{graphicx}
+  - \usepackage{subfig}
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{wrapfig}
+  - \usepackage{float}
+  - \usepackage{colortbl}
+  - \usepackage{pdflscape}
+  - \usepackage{tabu}
+  - \usepackage{threeparttable}
+  - \usepackage{threeparttablex}
+  - \usepackage[normalem]{ulem}
+  - \usepackage{makecell}
+  - \usepackage{xcolor}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## QP Example
+
+Minimize
+$$
+\begin{pmatrix}1\\2\\3\end{pmatrix}^T x + \frac{1}{2} x^T \Sigma \ x
+$$
+
+s.t.
+$$
+\begin{aligned}
+\sum x_i & = 1 \\
+x_1 & <= 0.5 \\
+x_2 + x_3 & >= 0.8
+\end{aligned}
+$$
+
+$$ 
+\begin{aligned}
+A_e^T x & = b_e \\
+A_n^T x & >= b_n
+\end{aligned}
+$$
+
+
+## Data
+
+```{r, echo=TRUE}
+
+Cor <- matrix(c(1, 0.5, 0.2, 0.5, 1, 0.7, 0.2, 0.7, 1),3,3)
+sigma <- matrix(c(1, 2, 3), nrow=3)
+Sigma <- sigma %*% t(sigma) * Cor
+
+Sigma
+```
+
+## QP 
+
+```{r, echo=TRUE}
+library(quadprog)
+library(kableExtra)
+
+Amat <- matrix(0, 3, 3)
+Amat[,1] <- rep(1, 3)
+Amat[,2] <- c(-1, 0, 0)
+Amat[,3] <- c(0, 1, 1)
+b <- c(1, -0.5, 0.8)
+sol = solve.QP(Sigma, c(1,2,3), Amat, b, meq=1)
+```
+
+## Solution
+
+```{r, echo=T}
+names(sol$solution) <- seq(3)
+kable(sol$solution, "latex", booktabs=T, row.names = TRUE) %>% kable_styling(full_width = F, position = "center")
+```
+
