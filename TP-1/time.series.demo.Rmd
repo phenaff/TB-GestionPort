@@ -1,0 +1,133 @@
+---
+title: "Manipulation des series chronologiques"
+author: "P. Hénaff"
+date: "2/2021"
+output: pdf_document
+
+header-includes:
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{graphicx}
+  - \usepackage{subfig}
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{wrapfig}
+  - \usepackage{float}
+  - \usepackage{colortbl}
+  - \usepackage{pdflscape}
+  - \usepackage{tabu}
+  - \usepackage{threeparttable}
+  - \usepackage{threeparttablex}
+  - \usepackage[normalem]{ulem}
+  - \usepackage{makecell}
+  - \usepackage{xcolor}
+  - \usepackage{amsmath}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r folder-tools, include=TRUE}
+get.src.folder <- function() {
+  path.expand("../GP/src")
+}
+
+get.data.folder <- function() {
+  path.expand("../GP/data")
+}
+```
+
+```{r setup-utils, include=FALSE}
+library(lubridate)
+source(file.path(get.src.folder(), 'utils.R'))
+source(file.path(get.src.folder(), 'FileUtils.R'))
+```
+
+# Lecture d'une série
+
+```{r, echo=TRUE}
+ts.zc <- get.ts(folder="SBF120", ticker="zc.pa")
+```
+
+```{r, fig-1, echo=FALSE, fig.width=10, fig.cap="Zodiac Aerospace"}
+plot(ts.zc, main='Zodiac Aerospace')
+```
+
+## Exercice 1
+
+Obtenir le même graphique avec un titre du CAC40.
+
+# Lecture de tous les composants de l'EuroStoxx 50
+
+On calcule ensuite le rendement moyen annuel et on présente les résultats sous forme de tableau.
+
+```{r, echo=TRUE, cache=TRUE}
+ts.EuroStoxx50 <- get.all.ts(folder="EuroStoxx50", returns=TRUE, combine=TRUE)
+avg.ret <- 252*colMeans(ts.EuroStoxx50)*100
+
+ticker <- toupper(gsub("\\..*$", "", names(avg.ret)))
+exchange <- toupper(tools::file_ext(names(avg.ret)))
+
+avg.ret.table <- data.frame(ticker, exchange, avg.ret)
+```
+
+```{r, table-1, echo=TRUE}
+n.rows <- nrow(avg.ret.table)
+n.mid <- round(n.rows/2)
+knitr::kable(list(avg.ret.table[1:n.mid,], avg.ret.table[(n.mid+1):n.rows,]), 
+             col.names=c("Ticker", "Exchange", "Rendement (%)"), 
+             caption="Rendement annuel moyen des actions de l\'EuroStoxx 50",
+             digits=1, booktab=TRUE, row.names=FALSE, longtable=FALSE)
+```
+
+## Exercice 2
+
+Calculer la matrice de correlation des rendements quotidients des actions de l'Eurostoxx50.
+
+# NASDAQ
+
+Selection des séries NASDAQ avec au moins 7 ans de données, et calcul du rendement annuel moyen.
+Executez le code pas à pas pour comprendre ce que font \texttt{sapply} et \texttt{do.call}. Notez aussi l'utilisation de l'option \texttt{cache=TRUE}} pour éviter un re-calcul assez long.
+
+```{r, nasdaq, echo=TRUE, cache=TRUE}
+
+min.length = 252*7
+
+ts.all <- get.all.ts(
+  folder='NASDAQ', tickers=NULL, returns = FALSE,
+  dt.start = dmy('01Jan2007'), combine = F
+)
+
+dtStart1 = sapply(ts.all, function(t) time(t)[1])
+dtStart = do.call(c, dtStart1)
+dtEnd = sapply(ts.all, function(t) time(t)[length(t)])
+dtEnd = do.call(c, dtEnd)
+ts.days <- sapply(ts.all, function(t) length(t))
+good.indices <- which(ts.days >= min.length)
+
+good.ts.names <- sapply(ts.all[good.indices], names)
+good.ts.ret <- sapply(ts.all[good.indices], 
+                      function(t) round(252*colMeans(returns(t)*100, 
+                                                     na.rm=TRUE),1))
+
+good.df <- data.frame(ticker=toupper(good.ts.names), ret=good.ts.ret)
+```
+
+On imprime les dix meilleurs et les dix pires rendements moyens.
+
+```{r, best-and-worst, echo=TRUE}
+
+sorted.good.df <- good.df[order(good.df$ret),]
+knitr::kable(rbind(head(sorted.good.df, 10), tail(sorted.good.df,10)),
+             col.names=c("Ticker", "Rendement (%)"), 
+             caption="NASDAQ: meilleurs et pires rendements annuels moyens", 
+             digits=1, booktab=TRUE, row.names=FALSE)
+
+```
+
+## Exercice 3
+
+Choisir 3 titres du NASDAQ, et reproduire la figure 3.5, page 35 du manuel de B. Pfaff.
+

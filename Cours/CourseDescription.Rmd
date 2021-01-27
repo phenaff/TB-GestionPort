@@ -53,17 +53,17 @@ Le principe général du cours est celui de la "classe inversée". Il y a 8 modu
 
 - le module commence par une video-conférence d'une vingtaine de minutes pour résumer le sujet et répondre aux questions,
 
-- en groupe de 3 ou 4, les étudiants réalisent ensuite les travaux pratiques propres à chaque unité, sous forme de notebooks "Rmarkdown". Tous les documents necessaires se trouvent sur GitHub, dans le dépot public XYZ.
+- en groupe de 3 ou 4, les étudiants réalisent ensuite les travaux pratiques propres à chaque module, sous forme de notebooks "Rmarkdown". Tous les documents nécessaires se trouvent sur GitHub, dans le dépot public \texttt{phenaff/TB-GestionPort}.
 
 - après chaque journée (deux modules), le travail est restitué lors d'une visio-conférence, deux groupes à la fois, soit 6-8 étudiants et l'enseignant. Chaque groupe désigne un "ambassadeur" pour chaque visio-conférence, charge à elle ou lui de relayer les questions du groupe. 
 
 # Evaluation
 
-Chaque groupe choisit de rendre 4 TP parmis les 8 proposés, chaque TP comptant pour 25\% de la note, qui sera commune à tous les membres du groupe. Les TP sont à réaliser en notebook "Rmarkdown" [@Xie2019] et à rendre au format .pdf. "Rmarkdown" est une technologie très utile à maitriser, car elle permet de produire des analyses *reproduisibles*, avec une mise en page de grande qualité. La présentation et mise en page des documents devra donc être soignée, et sera prise en compte dans l'évaluation. Les TP sont à rendre 10 jours après le cours correspondant.
+Chaque groupe choisit de rendre 4 TP parmi les 8 proposés, chaque TP comptant pour 25\% de la note, qui sera commune à tous les membres du groupe. Les TP sont à réaliser en notebook "Rmarkdown" [@Xie2019] et à rendre au format .pdf. Vous rendrez également le code source .rmd. "Rmarkdown" est une technologie très utile à maîtriser, car elle permet de produire des analyses *reproduisibles*, avec une mise en page de grande qualité. La présentation et mise en page des documents devra donc être soignée, et sera prise en compte dans l'évaluation. Les TP sont à rendre 10 jours après le module correspondant.
 
 # Roles dans chaque groupe de travail
 
-Comme indiqué plus haut, à l'occasion de chaque video conférence, chaque groupe désigne un "ambassadeur" chargé de relayer les commentaires ou questions du groupe. De plus, pour chaque TP donnant lieu à une évaluation, chaque groupe désigne un "maître du temps" chargé de s'assurer que le travail soit rendu en temps et en heure.
+Comme indiqué plus haut, à l'occasion de chaque vidéo conférence, chaque groupe désigne un "ambassadeur" chargé de relayer les commentaires ou questions du groupe. De plus, pour chaque TP donnant lieu à une évaluation, chaque groupe désigne un "maître du temps" chargé de s'assurer que le travail soit rendu en temps et en heure.
 
 # Objectifs du cours
 
@@ -83,7 +83,7 @@ A chaque séance, on utilisera le logiciel R pour mettre immédiatement en prati
 
 # Avant le premier cours
 
-Avant la première séance, installez R, RStudio et vérifiez que votre installation est opérationelle en éxécutant les deux scripts disponibles sur GitHub.
+Avant la première séance, installez R, RStudio, Rmarkdown et vérifiez que votre installation est opérationnelle en éxécutant le document \texttt{TP-1/time.series.demo.Rmd}. Vérifiez votre maîtrise de R en faisant les 3 exercices proposés.
 
 # Programme
 
@@ -93,6 +93,11 @@ Avant la première séance, installez R, RStudio et vérifiez que votre installa
 
 Dans cette séance introductive, on passera en revue les "faits stylisés" caractéristiques des séries chronologiques financières, et les méthodes de calcul de
 la covariance entre les actifs financiers.
+
+Documents à lire avant le cours:
+
+- Article de R. Cont (2001)
+- Chapitre 3 de Pfaff (2016)
 
 TP 1:
 
