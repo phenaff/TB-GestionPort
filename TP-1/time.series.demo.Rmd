@@ -127,7 +127,3 @@ knitr::kable(rbind(head(sorted.good.df, 10), tail(sorted.good.df,10)),
 
 ```
 
-## Exercice 3
-
-Choisir 3 titres du NASDAQ, et reproduire la figure 3.5, page 35 du manuel de B. Pfaff.
-

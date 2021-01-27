@@ -67,13 +67,13 @@ Comme indiqué plus haut, à l'occasion de chaque vidéo conférence, chaque gro
 
 # Objectifs du cours
 
-1. Aprofondir les propriétés statistiques des séries chronologiques financières.
+1. Approfondir les propriétés statistiques des séries chronologiques financières.
 
-2. Maitriser le modèle classique "moyenne-variance" de Markowitz[@Markowitz1952], et comprendre ses limites. Savoir le mettre en oeuvre et analyser les résultats. Apréhender comment le modèle de Black-Litterman répond à certaines limitations du modèle de Markowitz. 
+2. Maitriser le modèle classique "moyenne-variance" de Markowitz[@Markowitz1952], et comprendre ses limites. Savoir le mettre en oeuvre et analyser les résultats. Appréhender comment le modèle de Black-Litterman répond à certaines limitations du modèle de Markowitz. 
 
 3. Comprendre l'apport de l'approche factorielle en gestion de portefeuille.
 
-4. Apréhender les nouvelles approches de gestion fondées sur le "risk budgeting".
+4. Appréhender les nouvelles approches de gestion fondées sur le "risk budgeting".
 
 5. Réaliser un rapide survol des méthodes de gestion de portefeuille obligataire: immunizaion et dédication.
 
@@ -83,7 +83,7 @@ A chaque séance, on utilisera le logiciel R pour mettre immédiatement en prati
 
 # Avant le premier cours
 
-Avant la première séance, installez R, RStudio, Rmarkdown et vérifiez que votre installation est opérationnelle en éxécutant le document \texttt{TP-1/time.series.demo.Rmd}. Vérifiez votre maîtrise de R en faisant les 3 exercices proposés.
+Avant la première séance, installez R, RStudio, Rmarkdown, TinyTex et vérifiez que votre installation est opérationnelle en exécutant le document \texttt{TP-1/time.series.demo.Rmd}. Vérifiez votre maîtrise de R en faisant les 3 exercices proposés.
 
 # Programme
 
@@ -103,7 +103,7 @@ TP 1:
 
 - Observation des faits stylisés.
 - Estimation de quelques distributions et modèles dynamiques.
-- Estimation de la correlation entre series.
+- Estimation de la corrélation entre séries.
 
 ## Module 2 (10/2): La théorie classique [@Markowitz1952, @Treynor1973]
 
