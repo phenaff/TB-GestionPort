@@ -51,11 +51,11 @@ Le principe général du cours est celui de la "classe inversée". Il y a 8 modu
 
 - avant le cours, chacun étudie les documents mis à disposition (articles, chapitre du manuel)
 
-- le module commence par une video-conférence d'une vingtaine de minutes pour résumer le sujet et répondre aux questions,
+- le module commence par une video-conférence pour résumer le sujet et répondre aux questions,
 
-- en groupe de 3 ou 4, les étudiants réalisent ensuite les travaux pratiques propres à chaque module, sous forme de notebooks "Rmarkdown". Tous les documents nécessaires se trouvent sur GitHub, dans le dépot public \texttt{phenaff/TB-GestionPort}.
+- en groupe de 3 ou 4, les étudiants réalisent ensuite les travaux pratiques propres à chaque module, sous forme de notebooks "Rmarkdown". Tous les documents nécessaires se trouveront sur GitHub en temps utile, dans le dépot public \texttt{phenaff/TB-GestionPort}.
 
-- après chaque journée (deux modules), le travail est restitué lors d'une visio-conférence, deux groupes à la fois, soit 6-8 étudiants et l'enseignant. Chaque groupe désigne un "ambassadeur" pour chaque visio-conférence, charge à elle ou lui de relayer les questions du groupe. 
+- après chaque journée (deux modules), le travail est restitué lors d'une visio-conférence, deux ou trois groupes à la fois (on verra à l'usage), soit une dizaine étudiants et l'enseignant. Chaque groupe désigne un "ambassadeur" pour chaque visio-conférence, charge à elle ou lui de relayer les questions du groupe dans un premier temps. Tout le monde aura bien sûr l'occasion de s'exprimer. 
 
 # Evaluation
 
@@ -79,11 +79,13 @@ Comme indiqué plus haut, à l'occasion de chaque vidéo conférence, chaque gro
 
 # Logiciel
 
-A chaque séance, on utilisera le logiciel R pour mettre immédiatement en pratique les concepts présentés. Ce logiciel est devenu un outil incontournable en finance quantitative, et en particulier en gestion de portefeuille. 
+A chaque séance, on utilisera le logiciel R/Rstudio/Rmarkdown pour mettre immédiatement en pratique les concepts présentés. Ce logiciel est devenu un outil incontournable en finance quantitative, et en particulier en gestion de portefeuille. 
 
-# Avant le premier cours
+# Avant la première séance
 
-Avant la première séance, installez R, RStudio, Rmarkdown, TinyTex et vérifiez que votre installation est opérationnelle en exécutant le document \texttt{TP-1/time.series.demo.Rmd}. Vérifiez votre maîtrise de R en faisant les 3 exercices proposés.
+- Si ce n'est pas le cas, se familiariser avec le système de gestion de version Git et Github. Installer un outil de gestion de version tel que SmartGit. Je suggère à chaque groupe de travail de créer un dépot privé sur GitHub.
+
+- installez R, RStudio, Rmarkdown, TinyTex et vérifiez que votre installation est opérationnelle en exécutant le document \texttt{TP-1/time.series.demo.Rmd}. Vérifiez votre maîtrise de R en faisant les exercices proposés dans ce document.
 
 # Programme
 

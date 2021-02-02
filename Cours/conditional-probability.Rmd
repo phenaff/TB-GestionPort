@@ -1,0 +1,238 @@
+---
+title: "Conditional Probability and Volatility Clustering"
+author: "Patrick Hénaff"
+date: "Feb 2021"
+output:
+  bookdown::pdf_document2:
+    toc: false
+    keep_tex: yes
+    fig_caption: yes
+    latex_engine: pdflatex
+csl: ../../apa.csl
+geometry: margin=1in
+bibliography: ../../library.bib
+email: pa.henaff@gmail.com
+fontfamily: mathpazo
+fontsize: 11pt
+header-includes:
+- \linespread{1.05}
+- \usepackage[utf8]{inputenc}
+- \usepackage{amsthm}
+- \usepackage{xfrac}
+- \usepackage{float}
+---
+
+<!--    includes:
+      in_header: preamble.tex
+-->
+
+```{r setup, include=FALSE, cache=F, message=F, warning=F, results="hide"}
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(fig.path='figs/')
+knitr::opts_chunk$set(cache.path='_cache/')
+knitr::opts_chunk$set(warning=F, message=F)
+# all figures to be set "Here"
+knitr::opts_chunk$set(fig.pos="H")
+
+# root folder of project
+get.src.folder <- function() {
+  path.expand("../GP/src")
+}
+
+get.data.folder <- function() {
+  path.expand("../GP/data")
+}
+
+library(latex2exp)
+
+source(file.path(get.src.folder(), 'PlotUtils.R'))
+source(file.path(get.src.folder(), 'PowerLawUtils.R'))
+source(file.path(get.src.folder(), 'FileUtils.R'))
+```
+
+The purpose of this note is to reproduce and comment some results on the conditional distribution of returns, presented by K. Chen *et al* in [@Chen-2008]. We provide the code and data to reproduce the calculations presented in the paper, and are able to reproduce its figures. We however show that the advocated model does not fully account for the "volatility clustering", an important stylized fact of financial time series.
+
+
+# Characteristics of Financial Time Series {#sec:fts}
+
+The characteristic features of financial time series have been
+extensively documented [@Cont2001]. As mentioned, a distribution of
+returns with \"fat tails\", and volatility clustering are the key
+aspects of these series. [@Chen-2008] shows that for many financial time
+series, the return at any time scale is, beyond some threshold,
+distributed according to a power law. The parameters of this power law
+depend upon the magnitude of return in the previous period (this is the
+volatility clustering feature). Moreover, when return is scaled
+conditionally to the magnitude of the previous period return, the
+distribution is found to follow a universal form, asymmetrical and with
+fat tails.
+
+Let $\{r\}$ be a series of returns, computed at intervals $\Delta t$.
+Following Chen's notation, the values of $r$ are binned according to
+$r_p$, the magnitude of return in the previous period. The standard
+deviation of each bin is $w(r_p)$. the distribution of return,
+conditional upon the magnitude of the previous return, can be expressed
+as: 
+\begin{equation}
+P(r | r_p) = \frac{1}{w(r_p)} f \left( \frac{r}{w(r_p)} \right)
+\label{eq:cond-dist}
+\end{equation}
+with:
+
+$r$
+
+:   return over a time interval $\Delta t$
+
+$r_p$
+
+:   absolute value of return in the previous period
+
+$w(r_p)$
+
+:   standard deviation of $r$ in the bin defined by $r_p$
+
+$f()$
+
+:   distribution of return, conditionally normalized
+
+It follows that the joint distribution of $r$ and $r_p$ given by
+(\ref{eq:cond-dist}) captures both the features described by $f()$
+(fat tails, asymmetry) and the conditional variance (volatility
+clustering).
+
+Numerous studies [@Gopikrishnana1998] have
+documented that the cumulative distribution of returns, beyond some
+threshold, can be described by a power law, that is, in the notation of
+(\ref{eq:cond-dist}):
+
+\begin{equation}
+f \left( x \right) = \frac{\alpha-1}{x_{\mbox{min}}} \left( \frac{x}{x_{\mbox{min}}} \right)^{-\alpha}, \ \ x>x_{\mbox{min}}
+\label{eq:power-law}
+\end{equation}
+
+@Chen-2008 [p. 2] notes that the distribution of scaled conditional
+return, $P(r | r_p)$ \"collapses to a universal curve\", and this can
+indeed be observed on some time series. Following Chen, we consider a
+long series of the Dow Jones Industrial Average, from 1900 to 2004,
+provided by @Williamson2013. The series is sampled every $T=2$ days, and
+we use 8 bins of equal size to partition $r_p$. 
+
+```{r}
+# number of bins
+nb <- 8
+ticker <- 'djia'
+r.djia <- get.ts(ticker, calc='return')
+ticker <- 'qqq'
+r.QQQ <- get.ts(ticker, calc='return')
+```
+
+The next function allocate observations $r_t$ into $nb$ bins, conditional upon the value of $|r_{t-1}|$.
+
+```{r, cache=TRUE}
+bins.djia <- make.bins(r.djia, NBIN=nb, model='abs', params)
+bins.QQQ <- make.bins(r.QQQ, NBIN=nb, model='abs', params)
+```
+
+Following the article in reference, we plot the conditional density of return for each bin. The width of the density is positively correlated to the magnitude of $|r_{t-1}|$, 
+although the pattern is more visible for QQQ (as reported in the paper) as for, for example, for DJIA. This is illustrated in the following two figures.  
+
+```{r condist-plot, fig.cap="Conditional density of QQQ and DJIA return. $r$ is partitioned in 8 bins of equal size, according to the absolute value of return in the previous period.", cache=TRUE, warning=FALSE, fig.show='hold', out.width="50%", cache=FALSE}
+par(mar=c(4,4,0.1,0.1))
+plot.conditional.r(r=r.QQQ, bins=bins.QQQ, ticker='QQQ',NBIN=nb)
+plot.conditional.r(r=r.djia, bins=bins.djia, ticker='DJIA',NBIN=nb)
+```
+
+
+
+Using the estimation
+method introduced by @Clauset2009, and considering each bin separately,
+we fit the tail distribution to a power law. The parameters
+$\alpha_{\text{min}}$ and $\alpha$ specific to each bin are reported in
+Figure \@ref(fig:powerlawplot). 
+The results are consistent with the ones reported by Chen *et al.*
+
+```{r powerlawplot, fig.cap="Cumulative density of DJIA return. $r$ is partitioned in 8 bins of equal size, according to the absolute value of return in the previous period. For each bin, the inserted table reports $x_{\\text{min}}$ and $\\alpha$.", cache=TRUE, warning=FALSE, out.width="70%", out.height="70%"}
+params = list(lambda=0.94, nb.init=250)
+plot.cum.cond.r(r=r.djia, bins=bins.djia, ticker='djia', sgn='all',
+NBIN=nb, model='abs', params=params)
+```
+
+However, the claim should perhaps not be taken literally: it is not
+hard to identify time series that do not exhibit a \"collapse to a
+universal curve\". Figure \@ref(fig:bnp2), among many examples, displays the results of the
+same calculation, applied to the BNP (BNP.PA) stock, using daily close
+prices from 2000 to 2013. The conditional scaled tail return for the
+first bin (the bin corresponding to returns of small magnitude in the
+previous time interval) shows a marked difference from the distributions
+of the other bins.
+
+```{r bnp-1}
+ticker <- 'bnp'
+r.bnp <- get.ts(ticker, calc='return')
+bins <- make.bins(r.bnp, NBIN=nb, model='abs', params)
+```
+
+```{r bnp2, cache=TRUE, fig.cap="CDF of BNP (BNP.PA) return. The conditional scaled tail return for the first bin (the bin corresponding to returns of small magnitude in the previous time interval) shows a marked difference from the distributions of the other bins.", warning=FALSE, out.width="70%", out.height="70%"}
+plot.cum.cond.r(r=r.bnp, bins=bins, ticker=ticker, sgn='all',
+NBIN=nb, model='abs', params=params)
+```
+
+## Relationship between the scaling factor and $|r_p|$ 
+
+For $r_p$ sufficiently large, there is an apparent linear relationship between $r_p$ and $\sigma(r_p)$. This observation is consistent with volatility clustering, and is illustrated by the following calculation, which reproduces Figure 2 of Chen's paper.
+
+```{r scaling-plot-calc}
+
+ticker <- 'qqq'
+p <- get.ts(ticker, calc='price')
+nb <- 8
+
+# sample at T=2
+indx <- seq(1, length(p), by=2)
+r.2 <- returns(p[indx,])
+# sample at T=20
+indx <- seq(1, length(p), by=20)
+r.20 <- returns(p[indx,])
+```
+
+```{r scaling-plot, fig.cap="The scaling factor $\\sigma(r_p)$ as a function of $r_p$. The approximate linear dependency is confirmed by the calculation.", fig.height=3, fig.width=4}
+
+plot.scaling.factor(plot.type='plot', r=r.2, NBIN=nb, type='b',
+                    pch=16, forcexlim=c(0,.01),
+                    forceylim=c(.0, .01), 
+                    main=TeX('$\\sigma(r_p)$ as a function of $r_p'))
+
+plot.scaling.factor(plot.type='lines', r=r.20, NBIN=nb, 
+                    type='b', pch=1)
+labels <- c('T=2', 'T=20')
+legend('topleft', labels, lty=c(1,1), pch=c(16,1))
+```
+
+Finally, it should be noted that the scaling factor $\sigma(r_p)$ does not
+transform returns into independent random variables:
+Figure  \@ref(fig:acf) displays
+the autocorrelation of the scaled return and of its absolute value. This
+observation should not come as a surprise, as volatility is commonly
+modeled by an autoregressive process, and not by a function of the
+previous observation alone.
+
+```{r  acf, out.width="50%", fig.cap="Autocorrelation of $r_t/\\sigma(r_p)$ and $|r_t|/\\sigma(r_p)$. QQQ return serie, sampling $T=2$", fig.show="hold"}
+bins <- make.bins(r.QQQ, NBIN=nb, model='abs', params)
+par(mar=c(4,4,0.1,0.1))
+acf(bins$r.sc)
+acf(abs(bins$r.sc))
+```
+
+The effect of scaling can be measured by comparing Figure \@ref(fig:acf) to the same calculation, performed on the original return serie. Scaling by $\sigma(r_p)$ reduces the autocorrelation of absolute return, but does not completely cancel it.
+
+```{r  acf2, out.width="50%", fig.cap="Autocorrelation of $r_t$ and $|r_t|$. QQQ return serie, sampling $T=2$", fig.show="hold"}
+par(mar=c(4,4,0.1,0.1))
+acf(r.QQQ)
+acf(abs(r.QQQ))
+```
+
+# Conclusion
+
+Scaling return series by a factor which is a function of the absolute value of return in the previous period provides a model for "fat tails", but only partially captures the volatility clustering feature of financial time series.
+
+# Bibliography
