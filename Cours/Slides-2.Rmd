@@ -107,7 +107,7 @@ source(file.path(get.src.folder(), 'FileUtils.R'))
 ## Données
 
 ```{r, eval=TRUE, echo=FALSE, warning=FALSE}
-daily.ret.file <- "./daily.ret.rda"
+daily.ret.file <- file.path(get.data.folder(), "daily.ret.rda")
 tickers <- c("AAPL", "AMZN", "MSFT", "F", "SPY", "QQQ", "XOM", "MMM", "HD", "PG", "KO")
 if(!file.exists(daily.ret.file)) {
 daily.ret <- NULL
