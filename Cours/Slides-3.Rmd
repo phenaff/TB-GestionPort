@@ -28,7 +28,7 @@ header-includes:
   - \usepackage{xcolor}
 
   
-bibliography: ../library.bib
+bibliography: ../../library.bib
 ---
 
 ```{r setup, include=FALSE}
@@ -116,6 +116,8 @@ $$
   $$
 
 ## Allocation Treynor-Black
+
+Voir note pour le détail des calculs.
 
 ## Données
 
