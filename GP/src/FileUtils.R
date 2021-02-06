@@ -41,13 +41,13 @@ get.fname <- function(ticker, folder=NULL, extension) {
   fname
 }
   
-get.ts <- function(ticker, folder=NULL, calc = 'return', 
+get.ts <- function(ticker, folder=NULL, returns=T, 
                    dtStart = NULL, dtEnd = NULL) {
     fname <- get.fname(ticker, folder, 'rda')
     
     if (file.exists(fname)) {
       load(fname)
-      act.p <- get(tolower(ticker))
+      act.p <- ts
     } else {
       fname <- get.fname(ticker, folder, 'csv')
       tmp <- read.csv(fname,
@@ -55,9 +55,11 @@ get.ts <- function(ticker, folder=NULL, calc = 'return',
       t <- as.Date(tmp[,1], origin = '2000-01-01')
       act.p <- timeSeries(tmp[,2], t)
     }
+    
     names(act.p) <- ticker
-    if (calc == 'return')
+    if (returns)
       act.p <- returns(act.p)
+    
     if (!is.null(dtStart) | !is.null(dtEnd)) {
       if (is.null(dtStart))
         dtStart <- first(time(act.p))
@@ -161,7 +163,7 @@ get.all.ts <-
     for (i in seq_along(tickers)) {
       ticker <- tickers[i]
       tmp <- tryCatch(
-        get.ts(folder, ticker),
+        get.ts(ticker, folder, returns),
         error = function(err)
           FALSE, warning = function(warn)
             FALSE
@@ -169,9 +171,6 @@ get.all.ts <-
       
       if (is.logical(tmp))
         next()
-      
-      if (returns)
-        tmp <- returns(tmp)
       
       colnames(tmp) <- ticker
       if (combine) {
