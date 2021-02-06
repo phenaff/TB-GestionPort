@@ -334,6 +334,8 @@ $$
     & \mathbf{1}^T w  = 1
 \end{aligned}
 $$
+
+Voir note pour solution analytique et théorème de séparation des fonds.
 ::::
 
 :::: column
@@ -353,11 +355,6 @@ text(x=0.11, y=0.2, labels=TeX("$\\mu^*$"), pos=3, offset=.5, cex=2)
 ::::
   
 :::
-
-## Modèle de Markowitz - Solution Analytique
-
-## Théorème de Séparation
-
 
 ## Utilisation dans l'industrie
 
@@ -390,13 +387,6 @@ text(x=0.0, y=r.f, labels=expression(r[f]), pos=2, offset=0)
 text(x=sigma, y=mu, labels=assets, pos=4, cex = 1)
 segments(0, r.f, sigma.frontier[7], mu.frontier[7], col='red', lty=2, lwd=3)
 ```
-
-
-## Ajout d'un actif sans risque (2)
-
-
-
-## Ajout d'un actif sans risque (2)
 
 
 ## Portefeuille Tangent (1)
@@ -445,27 +435,16 @@ abline(a=r.f, b=(mu.t-r.f)/sigma.t, col='red', lty=2)
 ::::
 :::
 
-## Multiple assets - Mean/Variance Optimization
+## Optimisation Moyenne/Variance: Procédure de calcul
 
-$$
-\begin{aligned}
-    \mbox{min\ \ } & w^T \Sigma w  \\
-    \mbox{s.t.} & \\
-    & w^T r  = r^* \\
-    & w^T 1 = 1 \\
-  \end{aligned}
-$$
-
-## Mean/Variance Optimization Workflow
-
-* Compute expected return and covariance matrix
-* Define additional linear constraints
-* Set up QP problem and solve
-* Vary $r^*$ to draw efficient frontier and tangent portfolio
-* Choose allocation mix as a function of risk tolerance
+* Déterminer les espérances de rendement des actifs et la matrice de covariance
+* Définir des contraintes du portefeuille (ex: encours max par ligne)
+* Résoudre 
+* Faire varier $r^*$ pour dessiner la frontière efficiente et le portefeuille tangent
+* Choisir l'allocation en fonction de la tolérance au risque de l'investisseur
 
 
-## Mean/Variance Optimization - with Basic R (1)
+## Optimisation M/V - avecR (1)
 
 
 ```{r, echo=TRUE}
@@ -653,10 +632,6 @@ for(i in seq_along(tickers)) {
   text(sqrt(Sigma[i,i]), mu[i], tickers[i], cex=1.2, col="blue")
 }
 ```
-
-## Portefeuille Tangent (long) - Solution Numérique
-
-
 
 ## Allocation le long de la droite de marché
 

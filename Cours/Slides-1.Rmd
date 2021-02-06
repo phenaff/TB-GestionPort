@@ -46,6 +46,7 @@ library(Hmisc)
 library(nFactors)
 library(kableExtra)
 library(latex2exp)
+library(corrplot)
 
 get.src.folder <- function() {
   path.expand("../GP/src")
@@ -118,19 +119,19 @@ plot(return_series$AMZN, col="red", main = "Daily return")
 ## Histogram of daily return - AMZN
 
 ```{r, ret-hist, echo=FALSE, fig.height=5}
-r <- return_series$AMZN
-r <- r[!is.na(r)]
-hist(r, breaks=40, freq=FALSE, main='')
-rug(r)
-curve(dnorm(x, mean=mean(r), sd=sd(r)), add=TRUE, col='red', lwd=3, xaxt='n')
+r.AMZN <- return_series$AMZN
+r.AMZN <- r.AMZN[!is.na(r.AMZN)]
+hist(r.AMZN, breaks=40, freq=FALSE, main='')
+rug(r.AMZN)
+curve(dnorm(x, mean=mean(r.AMZN), sd=sd(r.AMZN)), add=TRUE, col='red', lwd=3, xaxt='n')
 ```
 
 
 ## Analysis of return distribution - AMZN
 
 ```{r, qqplot-normal, echo=FALSE, fig.height=5}
-qqnorm(as.vector(r),main=NULL)
-qqline(as.vector(r),col='red', lwd=2)
+qqnorm(as.vector(r.AMZN),main=NULL)
+qqline(as.vector(r.AMZN),col='red', lwd=2)
 ```
 
 
@@ -152,6 +153,16 @@ rownames(mo) <- symbols
 kable(mo, "latex", booktabs=T)
 ```
 
+## Autocorrelation of Returns (AMZN)
+
+
+```{r, label=autocor, echo=FALSE, fig.height=5}
+op <- par(mfrow=c(1,2))
+acf(r.AMZN, ylim=c(0, .6), main='autocorrelation of r(t)')
+acf(abs(r.AMZN), ylim=c(0, .6), main='autocorrelation of |r(t)|')
+par(op)
+```
+
 
 ## Rescaling daily return by $\sigma(r_{t-1})$ [@Chen-2008]
 
@@ -166,7 +177,7 @@ Pr(z_t > x) & = \left(\frac{z_t}{z_{min}} \right)^{-\alpha+1}
 \right\} z_t > z_{min}
 $$
 
-The density of $z_t$ can be approximated by a power law.
+The density of $z_t$ can be approximated by a power law. See paper for details of calculation.
 
 ## Rescaling of daily return by $\sigma(r_{t-1})$
 
@@ -175,19 +186,7 @@ The density of $z_t$ can be approximated by a power law.
 nb <- 8
 params = list(lambda=0.94, nb.init=250)
 ticker <- 'AMZN'
-plot.cum.cond.r(r=r, ticker = ticker, sgn='all',NBIN=nb, model='abs', params=params)
-```
-
-## Rescaling of positive daily return by $\sigma(r_{t-1})$
-
-```{r, powerlaw-2, echo=FALSE, message=FALSE, fig.height=6, fig.align="center"}
-plot.cum.cond.r(r=r, ticker=ticker, sgn='pos',NBIN=nb)
-```
-
-## Rescaling of negative daily return by $\sigma(r_{t-1})$
-
-```{r, powerlaw-3, echo=FALSE, warning=FALSE, message=FALSE, fig.height=6, fig.align="center"}
-plot.cum.cond.r(r=r, ticker=ticker, sgn='neg',NBIN=nb)
+plot.cum.cond.r(r=r.AMZN, ticker = ticker, sgn='all',NBIN=nb, model='abs', params=params)
 ```
 
 ## Unconditional distribution of return
@@ -209,13 +208,13 @@ $X$ follows a Johnson distribution if $Z$ is normal.
 ## Fitted Johnson SU distribution - AMZN (1)
 
 ```{r, johnson-1, label=JohnsonFit, echo=FALSE}
-johnson.fit <- JohnsonFit(r)
+johnson.fit <- JohnsonFit(r.AMZN)
 kable(as.data.frame(johnson.fit), "latex", booktabs=TRUE) %>% kable_styling(position="center")
 ```
 
 
 ```{r, johnson-2, label=empirical-vs-fitted, echo=F}
-m1 <- moments(r)
+m1 <- moments(r.AMZN)
 st <- sJohnson(johnson.fit)
 m2 = c(st$Mean, sqrt(st$Variance), st$Skewness, st$Kurtosis)
 df.stats <- data.frame(cbind(sample=m1, johnson=m2))
@@ -234,7 +233,7 @@ t2 = substitute(paste(
   lambda, ": ", l), list(g=pp3(johnson.fit$gamma), d=pp3(johnson.fit$delta),
                          x=pp3(johnson.fit$xi), l=pp3(johnson.fit$lambda)))
 
-hist(r,freq=FALSE,breaks=40, main=t2)
+hist(r.AMZN,freq=FALSE,breaks=40, main=t2)
 plot(function(x)dJohnson(x,johnson.fit),-.1,.1,col='red', lwd=3,add=TRUE)
 ```
 
@@ -257,33 +256,44 @@ qqJohnson <- function(y, params, n=100, abline=TRUE, ...) {
 }
 
 op <- par(mfrow=c(1,2))
-qqJohnson(r, johnson.fit, main="Johnson SU")
-qqnorm(r, main="Normal")
-qqline(r)
+qqJohnson(r.AMZN, johnson.fit, main="Johnson SU")
+qqnorm(r.AMZN, main="Normal")
+qqline(r.AMZN)
 par(op)
 ```
 
+## Correlation between assets (NASDAQ)
 
-## Autocorrelation of Returns
-
-
-```{r, label=autocor, echo=FALSE, fig.height=5}
-op <- par(mfrow=c(1,2))
-acf(r, ylim=c(0, .6), main='autocorrelation of r(t)')
-acf(abs(r), ylim=c(0, .6), main='autocorrelation of |r(t)|')
-par(op)
+```{r, cor-0, echo=FALSE, cache=FALSE, warning=FALSE, message=FALSE, cache=TRUE} 
+folder <- 'NASDAQ'
+tickers <- get.tickers(folder)[1:150]
+ts.all <- get.all.ts(folder, tickers, dt.start = dmy('01Mar2007'), combine = TRUE)
 ```
+
+```{r, cor-1, echo=FALSE}
+nb.ev = 6
+nb.obs <- 252
+
+dt.start <- dmy("01Aug2009")
+idx.start <- closest.index(ts.all, dt.start)
+idx <- seq(idx.start, length.out=nb.obs)
+
+cor.NASDAQ <- cor(ts.all[idx,])
+
+corrplot(cor.NASDAQ, type="upper", order="hclust", tl.pos='n')
+```
+
 
 ## Correlation between assets
 
-```{r, cor-1, echo=FALSE, cache=FALSE, warning=FALSE, message=FALSE, cache=TRUE} 
+```{r, cor-2, echo=FALSE, warning=FALSE, message=FALSE, cache=TRUE} 
 ## NASDAQ
 folder <- 'NASDAQ'
 tickers <- get.tickers(folder)[1:150]
 ts.all <- get.all.ts(folder, tickers, dt.start = dmy('01Mar2007'), combine = TRUE)
 ```
 
-```{r, cor-2, echo=FALSE}
+```{r, cor-3, echo=FALSE}
 nb.ev = 6
 nb.obs <- 252
 
@@ -314,7 +324,7 @@ large.ev.2 <- norm.ev[1:nb.ev]
 names(large.ev.2) <- paste("PC", seq_along(large.ev.2))
 ```
 
-```{r, cor-3, echo=FALSE, fig.height=5}
+```{r, cor-4, echo=FALSE, fig.height=5}
 plot.1 <- barplot(100*large.ev.1, ylim=c(0,60), col="blue", ylab="Contribution (%)",
                   main="First PCs of 150 NASDAQ stocks, August 2009")
 lines(plot.1, 100*cumsum(large.ev.1), type='b', pch=5, col="red", lty=2)
@@ -324,7 +334,7 @@ legend("right", legend=c("Contribution ratio", "cumulative contribution"),
 
 ## Correlation between assets
 
-```{r, cor-4, echo=FALSE, fig.height=5}
+```{r, cor-5, echo=FALSE, fig.height=5}
 plot.2 <- barplot(100*large.ev.2, ylim=c(0,60), col="blue", ylab="Contribution (%)",
                   main="First PCs of 150 NASDAQ stocks, August 2012")
 lines(plot.2, 100*cumsum(large.ev.2), type='b', pch=5, col="red", lty=2)
@@ -337,7 +347,7 @@ legend("right", legend=c("Contribution ratio", "cumulative contribution"),
 Significance level (95%) for eigenvalues (252 observations, 127 variables):
 
 
-```{r, cor-5, fig.height=5, warning=FALSE}
+```{r, cor-6, fig.height=5, warning=FALSE}
 dt.start <- dmy("01Aug2009")
 idx.start <- closest.index(ts.all, dt.start)
 idx <- seq(idx.start, length.out=nb.obs)
@@ -363,7 +373,7 @@ minor.tick(ny=2)
 
 ## How many dimensions in a market?
 
-```{r, cor-6, fig.height=5, warning=FALSE}
+```{r, cor-7, fig.height=5, warning=FALSE}
 dt.start <- dmy("01Aug2012")
 idx.start <- closest.index(ts.all, dt.start)
 idx <- seq(idx.start, length.out=nb.obs)
