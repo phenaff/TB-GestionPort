@@ -1,0 +1,174 @@
+---
+title: "Gestion de Portefeuille"
+subtitle: "TP-3: Modèle de Treynor Black"
+author: Patrick Hénaff
+date: "Février-Mars 2020"
+output: 
+  pdf_document:
+    keep_tex: true
+    fig_caption: yes
+    latex_engine: pdflatex
+geometry: margin=1in
+
+header-includes:
+  - \usepackage[utf8]{inputenc}
+
+bibliography: ../../library.bib
+csl: ../../apa.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r load-libraries, include=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+library(xts)
+library(hornpa)
+library(lubridate)
+library(xtable)
+library(quantmod)
+library(PerformanceAnalytics)
+library(TTR)
+library(lubridate)
+library(roll)
+library(Hmisc)
+library(nFactors)
+library(kableExtra)
+library(broom)
+
+get.src.folder <- function() {
+  path.expand("../GP/src")
+}
+
+get.data.folder <- function() {
+  path.expand("../GP/data")
+}
+
+source(file.path(get.src.folder(), 'utils.R'))
+source(file.path(get.src.folder(), 'FileUtils.R'))
+```
+
+# Données
+
+## Séries de rendement quotidien pour 11 valeurs:
+
+```{r, eval=TRUE, echo=TRUE, warning=FALSE}
+monthly.ret.file <- file.path(get.data.folder(), "monthly.ret.rda")
+load(monthly.ret.file)
+```
+
+Pour l'indice de marché, on utilise VT, un ETF "World Market":
+
+```{r, echo=TRUE, warning=FALSE}
+VT.series.file <- file.path(get.data.folder(), "ret.VT.rda")
+
+if(!file.exists(VT.series.file)) {
+  
+sym <- "VT"
+world.index <- Ad(getSymbols(sym, auto.assign=FALSE))
+world.index.ret <- monthlyReturn(world.index)
+colnames(world.index.ret) <- "Market"
+save(world.index.ret, file=VT.series.file)
+} else {
+  load(VT.series.file)
+}
+```
+
+
+## Rendement moyen:
+
+```{r, echo=TRUE}
+monthly.ret <- merge.xts(monthly.ret, world.index.ret, join="inner")
+kable(colMeans(monthly.ret), "latex", escape=FALSE, col.names=c("$r$"), caption="Average monthly return", booktabs=T)%>% kable_styling(latex_options=c("striped", "HOLD_position"))
+```
+
+## Matrice de covariance des rendements:
+
+```{r, echo=TRUE}
+kable(cov(monthly.ret), "latex", booktabs=T) %>%
+kable_styling(latex_options="scale_down")
+```
+
+## taux sans risque
+
+Le taux sans risque mensuel (annualisé) est obtenu de la Réserve Fédérale US.
+
+```{r, echo=TRUE}
+taux.sans.risque.csv <- file.path(get.data.folder(), "DP_LIVE_01032020211755676.csv")
+tmp <- read.csv(taux.sans.risque.csv, header=TRUE, sep=";")[, c("TIME", "Value")]
+dt <- ymd(paste(tmp$TIME, "-01", sep=""))-1
+rf_rate <- xts(tmp$Value/100.0, dt)
+```
+
+```{r, echo=FALSE}
+plot(rf_rate)
+```
+
+```{r, echo=FALSE}
+colnames(rf_rate) <- "Rf"
+monthly.ret.2 <- merge.xts(monthly.ret, rf_rate/12, join="inner")
+head(monthly.ret.2)
+```
+
+
+# Estimation d'un modèle à un facteur
+
+Choisir une période de 48 mois. A partir des exemples présentés en cours, évaluer le modèle:
+
+
+$$
+R_i(t) - R_f(t) = \alpha + \beta (R_M(t) - R_f(t)) + \epsilon(t)
+$$
+
+en utilisant la fonction \texttt{lm}. Utilisez la fonction \texttt{kable} de \texttt{knitr} pour produire une présentation soignée des résultats.
+
+# Détermination du portefeuille actif
+
+On rappelle que le poids de chaque titre dans le portefeuille actif est proportionnel au ratio $\alpha_i/\sigma^2(\epsilon_i)$:
+
+$$
+w_i = \frac{\alpha_i/\sigma^2(\epsilon_i)}{\sum_i \alpha_i/\sigma^2(\epsilon_i)}
+$$
+
+Calculer les poids des actifs dans le portefeuille actif. Justifier votre choix d'inclure ou d'exclure tel ou tel instrument.
+
+Calculez les valeurs suivantes concernant le portefeuille actif:
+
+\begin{description}
+\item[$R_A$] Excess de rendement
+\item[$\alpha_A$] alpha du portefeuille actif
+\item[$\beta_A$]  beta du portefeuille actif
+\item[$\sigma_A$] ecart-type du portefeuille actif
+\end{description}
+
+# Détermination de la pondération entre le portefeuille actif et le portefeuille de marché.
+
+On rappelle l'allocation de richesse au portefeuille actif:
+
+$$
+w_A = \frac{\alpha_A \sigma^2_M}{\alpha_A \sigma^2_M (1-\beta_A) + R_M \sigma^2_A}
+$$
+
+Avec:
+
+$$
+\begin{aligned}
+R_A & = \alpha_A + \beta_A R_M \\
+\sigma^2_A & = \beta^2_A \sigma^2_M + \sigma^2(\epsilon_A)
+\end{aligned}
+$$
+
+Que penser de l'importance accordée au portefeuille actif? 
+
+# Capital Allocation Line
+
+Calculez l'espérance de rendement et le risque de quelques portefeuilles situés sur la "Capital Allocation Line" qui joint l'actif sans risque et le portefeuille risqué. Placez le portefeuille risqué, le portefeuille actif et le portefeuille de marché sur un graphique "espérance/risque", ci-dessous.
+
+
+```{r, echo=TRUE}
+plot(Mean ~ Sd, data=res, xlim=c(0, 0.4), ylim=c(0, .05), xlab=expression(sigma),
+     ylab="Excess Return", cex=.5, bty="n", cex.lab=1)
+with(res, text(Mean ~ Sd, labels=row.names(res), pos=4, cex=0.5, col="blue"))
+
+```
+
