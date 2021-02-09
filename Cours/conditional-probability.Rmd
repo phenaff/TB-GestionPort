@@ -121,9 +121,9 @@ we use 8 bins of equal size to partition $r_p$.
 # number of bins
 nb <- 8
 ticker <- 'djia'
-r.djia <- get.ts(ticker, calc='return')
+r.djia <- get.ts(ticker, returns=TRUE)
 ticker <- 'qqq'
-r.QQQ <- get.ts(ticker, calc='return')
+r.QQQ <- get.ts(ticker,  returns=TRUE)
 ```
 
 The next function allocate observations $r_t$ into $nb$ bins, conditional upon the value of $|r_{t-1}|$.
@@ -168,7 +168,7 @@ of the other bins.
 
 ```{r bnp-1}
 ticker <- 'bnp'
-r.bnp <- get.ts(ticker, calc='return')
+r.bnp <- get.ts(ticker, returns=TRUE)
 bins <- make.bins(r.bnp, NBIN=nb, model='abs', params)
 ```
 
@@ -184,7 +184,7 @@ For $r_p$ sufficiently large, there is an apparent linear relationship between $
 ```{r scaling-plot-calc}
 
 ticker <- 'qqq'
-p <- get.ts(ticker, calc='price')
+p <- get.ts(ticker, returns=FALSE)
 nb <- 8
 
 # sample at T=2
