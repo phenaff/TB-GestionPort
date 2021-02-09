@@ -13,8 +13,8 @@ geometry: margin=1in
 header-includes:
   - \usepackage[utf8]{inputenc}
 
-bibliography: ../../library.bib
-csl: ../../apa.csl
+bibliography: ../library.bib
+csl: ../apa.csl
 ---
 
 ```{r setup, include=FALSE}
