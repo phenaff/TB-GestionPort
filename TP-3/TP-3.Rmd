@@ -2,7 +2,7 @@
 title: "Gestion de Portefeuille"
 subtitle: "TP-3: Modèle de Treynor Black"
 author: Patrick Hénaff
-date: "Février-Mars 2020"
+date: "Février-Mars 2021"
 output: 
   pdf_document:
     keep_tex: true
@@ -162,8 +162,19 @@ Que penser de l'importance accordée au portefeuille actif?
 
 # Capital Allocation Line
 
-Calculez l'espérance de rendement et le risque de quelques portefeuilles situés sur la "Capital Allocation Line" qui joint l'actif sans risque et le portefeuille risqué. Placez le portefeuille risqué, le portefeuille actif et le portefeuille de marché sur un graphique "espérance/risque", ci-dessous.
+Calculez l'espérance de rendement et le risque de quelques portefeuilles situés sur la "Capital Allocation Line" qui joint l'actif sans risque et le portefeuille risqué. Placez le portefeuille risqué, le portefeuille actif et le portefeuille de marché sur un graphique "excédent de rendement/risque", ci-dessous.
 
+```{r, echo=TRUE}
+Assets <- c("AAPL", "AMZN", "MSFT", "F",  "XOM", "MMM",  "HD",   "PG",   "KO")
+plot.data <- monthly.ret.2[, c(Assets, "Rf")]
+for(a in Assets) {
+  plot.data[, a] <- plot.data[, a] - plot.data$Rf
+  }
+
+res <- data.frame(Mean=apply(plot.data[, Assets],2,mean),
+                  Sd = apply(plot.data[, Assets],2,sd))
+rownames(res) <- Assets
+```
 
 ```{r, echo=TRUE}
 plot(Mean ~ Sd, data=res, xlim=c(0, 0.4), ylim=c(0, .05), xlab=expression(sigma),
