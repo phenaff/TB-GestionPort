@@ -28,7 +28,7 @@ header-includes:
   - \usepackage{xcolor}
 
   
-bibliography: ../../library.bib
+bibliography: ../library.bib
 ---
 
 ```{r setup, include=FALSE}
