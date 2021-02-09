@@ -99,6 +99,7 @@ la covariance entre les actifs financiers.
 Documents à lire avant le cours:
 
 - Article de R. Cont (2001)
+- Note de cours "conditional probability"
 - Chapitre 3 de Pfaff (2016)
 
 TP 1:
@@ -109,11 +110,12 @@ TP 1:
 
 ## Module 2 (10/2): La théorie classique [@Markowitz1952]
 
-On considère ici le travail d'Harry Markowitz, qui établit les fondements de la gestion quantitative. 
+On considère ici le travail d'Harry Markowitz, qui établit les fondements de la gestion quantitative. Ce modèle est important car il a défini le vocabulaire et les concepts de base qui sont toujours d'actualité. 
 
 Documents à lire avant le cours:
 
 - Article de Markowitz (1952)
+- Note de cours
 - Chapitre 5 de Pfaff (2016)
 
 
@@ -128,7 +130,7 @@ Le modèle de Treynor-Black est une étape importante, car il est à l'origine d
 
 Documents à lire avant le cours:
 
-- Article de Markowitz (1952)
+- Article de Treynor & Black (1973)
 - Chapitre 5 de Pfaff (2016)
 
 
@@ -145,12 +147,9 @@ Documents à lire avant le cours:
 
 - Chapitre 10 de Pfaff (2016)
 
+TP-4:
 
-TP-3:
-
-- Construction d'un portefeuille optimal moyenne/variance
-- Analyse de sensibilité du modèle
-- Modèle de Black-Litterman.
+- Modèle M/V et Black-Litterman.
 
 
 ## Module 4 (9/3): L'environnement de la gestion de portefeuille.
@@ -158,9 +157,6 @@ TP-3:
 - OPCVM et ETF
 - Frais, performance, flux de fonds, hedge funds
 
-TP-4:
-
-- Suite de la séance précedente: modèle M/V et Black-Litterman.
 
 
 ## Module 5 (10/3): Approche factorielle [@Fama1992; @Fama1993; @Harvey2016a]
