@@ -8,8 +8,8 @@ output:
       in_header: preamble.tex
 geometry: margin=1in
 
-bibliography: ../../library.bib
-csl: ../../apa.csl
+bibliography: ../library.bib
+csl: ../apa.csl
 nocite: |
   @Wurtz2015
 
