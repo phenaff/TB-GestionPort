@@ -8,9 +8,9 @@ output:
     keep_tex: yes
     fig_caption: yes
     latex_engine: pdflatex
-csl: ../../apa.csl
+csl: ../apa.csl
 geometry: margin=1in
-bibliography: ../../library.bib
+bibliography: ../library.bib
 email: pa.henaff@gmail.com
 fontfamily: mathpazo
 fontsize: 11pt
