@@ -81,7 +81,7 @@ r_G & \approx r_A - \frac{1}{2} \left[ \frac{1}{n} \sum_k r^2_k - \frac{1}{n^2} 
 
 $$
 \begin{aligned}
-    \mbox{min} \ \ & w^T \Sigma w  \\
+    \mbox{min} \ \ & \frac{1}{2} w^T \Sigma w  \\
     \mbox{s.t.} & \\
     & A^T w  = b
   \end{aligned}
