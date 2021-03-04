@@ -139,57 +139,55 @@ TP 3:
 - Construction d'un modèle à 1 facteur
 - Optimisation de portefeuille selon Treynor-Black
 
-## Module 4 (9/3): Gestion de portefeuille et risque de modélisation. [@Boyle2012; @He2005]
+## Module 4 (9/3): Risque de modélisation. [@Boyle2012; ]
 
-Identification du "risque de modélisation" dans le cadre du modèle moyenne/variance. Tests statistiques, application à la construction de portefeuilles. le modèle de Black-Litterman vu comme stratégie pour limiter le risque de modélisation.
+Identification du "risque de modélisation" dans le cadre du modèle moyenne/variance. 
+
+- Risque lié à l'estimation des paramètres
+- Risque lié à la formulation même du modèle
+
+On passera en revue les méthodes d'estimation robustes et quelques formulations alternatives du couple rendement/risque.
+
+TP-4 (version 1):
+
+- Mettre en oeuvre le modèle de Kono et Yamazaki
+
+TP-4 (version 2):
+
+- Impact de la matrice de covariance sur les résultats de modèle moyenne-variance.
+
+## Module 5 (10/3): Modèle de Black-Litterman. [@He2005]
+
+Le modèle de Black-Litterman et ses nombreuses extensions est très prisé des gestionnaires du fait de sa flexibilité. Il permet également de limiter les risques de modélisation identifiés précédement.
 
 Documents à lire avant le cours:
 
 - Chapitre 10 de Pfaff (2016)
+- article de Litterman et He
 
-TP-4:
+TP-5:
 
-- Modèle M/V et Black-Litterman.
-
-
-## Module 4 (9/3): L'environnement de la gestion de portefeuille.
-
-- OPCVM et ETF
-- Frais, performance, flux de fonds, hedge funds
+- Comparaison du modèle M/V et du modèle de Black-Litterman.
 
 
-
-## Module 5 (10/3): Approche factorielle [@Fama1992; @Fama1993; @Harvey2016a]
+## Module 6 (10/3): Approche factorielle [@Fama1992; @Fama1993; @Harvey2016a]
 
 - Définition et identification des facteurs
 - Estimation et limites statistiques
 - Modèles d'allocation factoriels
 
-TP-5:
+TP-6:
 
 - Construction de portefeuille à partir du modèle à trois facteurs de Fama-French.
 
-## Module 6 (10/3): Méthodes récentes de gestion de portefeuille, "risk budgeting" [@Bruder2012]
+## Module 7 (23/3): Méthodes récentes de gestion de portefeuille, "risk budgeting" [@Bruder2012]
 
 - Modèle 1/N
 - Modèle "risk parity"
 
-TP-6:
-
-- calcul de portefeuilles selon des méthodes de "risk budgeting"
-
-## Module 7 (23/3): Rendement et risque des obligations [@Henaff2012].
-
-Rappel des principes de valorisation et de mesure de risque des obligations:
-- Courbe des taux.
-- Notion de spread.
-- Caractérisation du risque de taux.
-
 TP-7:
 
-- Calculs obligataires
-- Estimation d'une courbe zero-coupon
-- Calcul de spread obligataire
+- calcul de portefeuilles selon des méthodes de "risk budgeting"
 
 ## Module 8 (23/3): Gestion de portefeuille obligataire: Immunisation et dédication [@Henaff2012].
 
