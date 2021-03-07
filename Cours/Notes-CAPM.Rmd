@@ -1,0 +1,236 @@
+---
+output: 
+  pdf_document:
+    keep_tex: true
+    fig_caption: yes
+    latex_engine: pdflatex
+geometry: margin=1in
+
+bibliography: ../../library.bib
+csl: ../../apa.csl
+
+title: "MEDAF & Mesure de Performance"
+author: Patrick Hénaff
+date: "Mars 2021"
+email: "pa.henaff@gmail.com"
+
+fontfamily: mathpazo
+fontsize: 11pt
+header-includes:
+   - \linespread{1.05}
+   - \usepackage[utf8]{inputenc}
+   - \usepackage{amsthm}
+   - \usepackage{xfrac}
+---
+
+```{r setup, include=FALSE, cache=F, message=F, warning=F, results="hide"}
+knitr::opts_chunk$set(cache=TRUE)
+knitr::opts_chunk$set(fig.path='figs/')
+knitr::opts_chunk$set(cache.path='_cache/')
+knitr::opts_chunk$set(warning=F, message=F)
+```
+
+\newcommand{\ones}{\mathbf{1}}
+\newcommand{\onesT}{\mathbf{1}^T}
+
+\newtheorem{thm}{Theorem}
+
+# CAPM
+
+## Diversification des portefeuilles
+
+Espérance de rendement d'un portefeuille $P$:
+
+$$
+\begin{aligned}
+E(R_P) & = \sum_i w_i E(R_i) \\
+\mu_P & = \sum_i w_i \mu_i
+\end{aligned}
+$$
+Le risque du portefeuille est mesuré par sa variance... mais cela n'est pas vrai pour les titres individuels!
+Il faut mesurer le risque d'un titre individuel par sa contribution (positive ou négative) au risque total du portefeuille détenu. Il faut mesurer le risque d'un titre par la covariance de sa rentabilité avec celle du portefeuille global, $\mathrm{cov}(R_i, R_P) = \sigma_{i,P}$.
+
+Contribution marginale du titre $i$ au risque total = $\mathrm{cov}(R_i, R_P) / \sigma_P$.
+
+Conséquences:
+
+- le risque marginal d'un titre peut être positif ou négatif
+- le risque d'un titre depends du portefeuille global dont il fait partie.
+
+
+## Rappel sur la frontière efficiente
+
+```{r cml, echo=FALSE, out.width = '100%', fig.cap="Droite de Marché des Capitaux"}
+knitr::include_graphics("capital-market-line.pdf")
+```
+
+- Soit $T$ le portefeuille tangent, l'équation de la droite de marché (capital market line) est:
+
+$$
+\mu_P = r + \left(\frac{\mu_T-r}{\sigma_T}\right) \sigma_P
+$$
+- Tout portefeuille efficient peut être obtenu par une combinaison d'un compte de dépôt (actif sans risque) et d'un investissement dans le portefeuille tangent. Pour un même horizon d'investissement, la pondération dépendra de l'aversion au risque de chaque investisseur (il peut même emprunter pour investir plus de 100\% de sa richesse dans le portefeuille tangent).
+
+
+## Modèle d'équilibre des actifs financiers (MEDAF/CAPM)
+
+Puisque tous les investisseurs investissent dans le portefeuille tangent $T$, celui ci doit être l'ensemble du marché lui-même. On nomera ce portefeuille tangent le portefeuille de marché $M$. On a donc cette expression pour la CML:
+
+$$
+\mu_P = r_f + \left(\frac{\mu_M-r_f}{\sigma_M}\right) \sigma_P
+$$
+
+Pente de la CML: prix de marché du risque: excédent de rendement espéré par unité de risque. Noter que cette relation s'applique seulement aux portefeuilles efficients, pas aux titres individuels. On a remarqué plus haut que le risque d'un titre individuel devait être fonction de la covariance entre le rendement de ce titre et le rendement du portefeuille global détenu par l'investisseur.
+Ce qui suggère la relation suivante pour un titre individuel:
+
+
+\begin{equation}
+\mu_i - r_f = \beta_i (\mu_M-r_f)
+\end{equation}
+
+avec $\beta_i = \sigma_{i,M} / \sigma^2_M$.
+
+## Demonstration de la formule du CAPM
+
+On forme un portefeuille avec l'actif $i$ et le portefeuille de marché $M$:
+
+\begin{subequations}
+\begin{align}
+\mu(\alpha) &= \alpha \mu_i + (1-\alpha) \mu_M \label{eq:eq-1} \\
+\sigma(\alpha) &= \sqrt{\alpha^2 \sigma_i^2 + (1-\alpha)^2 \sigma_M^2 + 2\alpha(1-\alpha) \sigma_{M,i}} \label{eq:eq-2}
+\end{align}
+\end{subequations}
+
+
+Pour $\alpha=0$ la courbe $(\sigma(\alpha), r(\alpha))$ doit être tangente à la CML, donc:
+
+\begin{equation}
+\frac{\partial r(\alpha)}{\partial \sigma(\alpha)} = \frac{\mu_M-r_f}{\sigma_M} \label{eq:eq-3}
+\end{equation}
+
+\begin{equation}
+\frac{\partial \mu(\alpha)}{\partial \sigma(\alpha)} = \frac{\partial \mu / \partial \sigma}{\partial \sigma / \partial \alpha}
+\end{equation}
+
+En utilisant les équations (\ref{eq:eq-1}) et (\ref{eq:eq-2}), on obtient:
+
+\begin{equation}
+\frac{\partial \mu / \partial \sigma}{\partial \sigma / \partial \alpha} = \frac{\mu_i - \mu_M}{(\sigma_{M,i} - \sigma^2_M)/\sigma_M}
+\end{equation}
+
+Utilisant (\ref{eq:eq-3}), on obtient:
+
+\begin{equation}
+\frac{\mu_i - \mu_M}{(\sigma_{M,i} - \sigma^2_M)/\sigma_M} = \frac{\mu_M-r_f}{\sigma_M}
+\end{equation}
+
+Résolvant pour $\mu_i$, on obtient:
+
+\begin{equation}
+\mu_i - r_f = \frac{\sigma_{M,i}}{\sigma^2_M}(\mu_M-r_f)
+\end{equation}
+
+C'est à dire la formule du CAPM avec $\beta_i = \sigma_{M,i} / \sigma^2_M$.
+
+## Interpretation
+
+- Si $\beta_i = 0$, il n'y a pas d'espérance de rendement > $r_f$, car le risque peut être diversifié: on constitue un portefeuille de titres tels que les $\beta_i=0$. La variance de ce portefeuille tends vers 0 avec le nombre de titres, son espérance de rendement est donc $r_f$. 
+
+- On peut donc interpréter $\beta_i$ comme une mesure du risque non-diversifiable: le risque systématique, ou risque d'exposition au marché. 
+
+- On peut donc placer les actifs sur un graphe selon les axes $\mu$ (vertical) et $\beta$ (horizontal). Selon la théorie, tous les titres devraient se placer sur une droite, la droite de marché des actifs risqués (Security Market Line). Cette droite passe par le point $(0, r_f)$ et $(1, \mu_M)$.
+
+- Le MEDAF fait disparaitre l'aspect arbitraire de la mesure de risque $\sigma_{i,P}$ mentionnée plus haut. Avec le MEDAF, le risque est mesuré par $\beta_i$, indépendement du portefeuille de l'investisseur. 
+
+
+## Décomposition de la variance
+
+Dans l'esprit du CAPM, notons:
+
+$$
+r_i = r_f + \beta_i(r_M - r_f) + \epsilon_i
+$$
+ou $r_i$, $r-M$, $\epsilon_i$ sont des variables aléatoires. On montre que $\mathrm{cov}(\epsilon_i, r_M)=0$ et donc:
+
+$$
+\sigma_i^2 = \beta_i^2 \sigma_M^2 + \sigma^2_{\epsilon}
+$$
+Le risque du titre $i$ est décomposé en un risque de marché $\beta_i^2 \sigma_M^2$ et un risque spécifique $\sigma^2_{\epsilon}$ qui peut être éliminé par diversification.
+
+Illustration: On considère $n$ actifs ayant tous $\beta_i = 0.8$, $\sigma_i = .25$ alors que $\sigma_M=.2$.
+
+Le risque spécifique d'un titre est:
+
+```{r}
+sigma.i <- .25
+sigma.M <- .2
+beta.i <- .8
+sigma.eps <- sqrt(sigma.i^2 - (beta.i*sigma.M)^2)
+```
+
+soit 
+$\sigma_{\epsilon} =  `r round(sigma.eps, 3)`$.
+
+Construisons maintenant une portefeuille de 50 titres de ce type, equipondérés:
+
+```{r}
+n <- 50
+sigma2.eps.P = (1/n^2) * n * sigma.eps^2
+sigma2.M.P <- (beta.i * sigma.M)^2
+sigma2.P <- sigma2.M.P + sigma2.eps.P
+```
+
+Soit, pour le portefeuille de 50 titres, un risque spécifique $\sigma_{\epsilon}(P) = `r round(sqrt(sigma2.eps.P),3)`$ 
+et un risque total $\sigma(P) = `r round(sqrt(sigma2.P),3)`$. le risque diversifiable a été pratiquement éliminé.
+
+## Modèle à un facteur de Sharpe
+
+Version empirique du MEDAF. Le MEDAF traduit une relation d'équilibre fondée sur les espérances de rendement. Le modèle à un facteur de Sharpe est une relation statistique que semble identique au MEDAF, mais ici les termes sont des variables aléatoires, non pas des espérances de rendement \textit{ex-ante}.
+
+$$
+R_i = \alpha_i + \beta_i R_M + \epsilon_i
+$$
+
+
+# Mesures de performance
+
+Prendre en compte à la fois la rentabilité moyenne et le risque subi. 
+
+- Ratio de Sharpe, fondé sur $\sigma$, adapté à l'évaluation d'un portefeuille bien diversifié
+- Alpha de Jensen, fondé sur $\beta$, adapté aux titres individuels.
+
+
+
+## Ratio de Sharpe
+
+$$
+S_P = \frac{\overline{r_P} - \overline{r_f}}{\sigma_P}
+$$
+Permet de visualiser la performance par rapport à la CML sur a graphique rendement/risque.
+
+## Ratio de Treynor
+
+$$
+S_P = \frac{\overline{r_P} - \overline{r_f}}{\beta_P}
+$$
+Rentabilité par unité de risque systématique, mesure la capacité du gestionnaire à éliminer le risque spécifique. Permet de visualiser la performance du portefeuille par rapport à la droite des actifs risqués (SML)
+
+## Ratio $M^2$ (Modigliani & Miller)
+
+$$
+M^2_P = \overline{r_f} + \frac{\sigma_B}{\sigma_P} (\overline{r_P} - \overline{r_f})
+$$
+Une mesure de performance ajustée pour le risque, à comparer avec le rendement moyen d'un portefeuille de référence $B$.
+
+## Alpha de Jensen
+
+$$
+\overline{R_p} -r_f = \alpha_p + \beta_p (\overline{R_M} - r_f) + \epsilon_p
+$$
+
+\textit{ex-ante}, selon le CAPM, $\alpha_p=0$. \textit{ex-post}, ce terme mesure la capacité du gestionnaire à dégager un excess de rendement par rapport au risque pris. Visuellement, le terme $\alpha_p$ représente la distance verticale entre le portefeuille et la SML dans un diagramme rendement/beta.
+
+# Bibliography
+
+
+

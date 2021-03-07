@@ -1,0 +1,211 @@
+---
+title: "Gestion de Portefeuille"
+subtitle: "TP-3: Modèle à un facteur et modèle de Treynor Black"
+author: Patrick Hénaff
+date: "Février-Mars 2020"
+output: 
+  pdf_document:
+    keep_tex: true
+    fig_caption: yes
+    latex_engine: pdflatex
+    includes:
+      in_header: ../preamble.tex
+geometry: margin=1in
+
+header-includes:
+  - \usepackage[utf8]{inputenc}
+
+bibliography: ../library.bib
+csl: ../apa.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+```
+
+```{r load-libraries, include=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+library(xts)
+library(hornpa)
+library(lubridate)
+library(xtable)
+library(PerformanceAnalytics)
+library(TTR)
+library(lubridate)
+library(roll)
+library(Hmisc)
+library(nFactors)
+library(kableExtra)
+library(broom)
+
+```
+
+# Données
+
+## Séries de rendement quotidien pour 11 valeurs:
+
+```{r, eval=TRUE, echo=TRUE, warning=FALSE}
+monthly.ret.file <- "./monthly.ret.rda"
+load(monthly.ret.file)
+```
+
+## Rendement moyen:
+
+```{r, echo=TRUE}
+kable(colMeans(monthly.ret), "latex", booktabs=T)
+```
+
+## Matrice de covariance des rendements:
+
+```{r, echo=TRUE}
+kable(cov(monthly.ret), "latex", booktabs=T) %>%
+kable_styling(latex_options="scale_down")
+```
+
+## taux sans risque
+
+Le taux sans risque mensuel est obtenu de la Réserve Fédérale US.
+
+```{r, echo=TRUE}
+tmp <- read.csv("DP_LIVE_01032020211755676.csv", header=TRUE, sep=";")[, c("TIME", "Value")]
+dt <- ymd(paste(tmp$TIME, "-01", sep=""))-1
+rf_rate <- xts(tmp$Value/100.0, dt)
+colnames(rf_rate) <- "Rf"
+monthly.ret.2 <- merge.xts(monthly.ret, rf_rate, join="inner")
+head(monthly.ret.2)
+```
+
+# Estimation d'un modèle à un facteur
+
+- Construire un portefeuille de marché à partir des indices QQQQ et SPY. Justifiez la pondération choisie.
+- Choisir une période de 48 mois et évaluer pour chaque titre le modèle:
+- Placer chaque titre sur un diagramme rendement/beta et calculer par regression la droite de marché des titres risqués. 
+- En déduire les titres qui, selon ce modèle, semblent chers et ceux qui semblent sous-évalués. Est-ce que cette approche vous semble pertinente?
+
+$$
+R_i(t) - R_f(t) = \alpha + \beta (R_M(t) - R_f(t)) + \epsilon(t)
+$$
+
+en utilisant la fonction \texttt{lm}.
+
+```{r, echo=FALSE}
+nb.obs <- 48
+Assets <- c("AAPL", "AMZN", "MSFT", "F",  "XOM", "MMM",  "HD",   "PG",   "KO")
+r.set <- monthly.ret.2[1:nb.obs,] 
+r.set$Market <- (7*r.set$QQQ + 28*r.set$SPY)/(28+7) 
+r.set$SPY <- NULL
+r.set$QQQ <- NULL
+# Excess return
+excess.r <- r.set[, c(Assets, "Market")]
+for(i in seq_along(ncol(excess.r))) {
+  excess.r[,i] <- excess.r[,i] - r.set$Rf
+}
+
+sigma2.M <- as.numeric(var(excess.r$Market))
+r.M <- mean(excess.r$Market)
+
+
+res <- data.frame(alpha=double(), beta=double(), sigma.e=double(), asset=character())
+
+for(A in Assets) {
+  tmp <- lm(paste(A, " ~ Market"), data=excess.r)
+  alpha <- tmp$coefficients["(Intercept)"]
+  beta  <- tmp$coefficients["Market"]
+  sigma.e <- glance(tmp)$sigma
+  if(alpha>0) res <- rbind(res, list(alpha=alpha, beta=beta, sigma.e=sigma.e, asset=A), stringsAsFactors=FALSE)
+}  
+rownames(res) <- res$asset
+res$Mean <- apply(excess.r[, rownames(res)],2,mean)
+res$Sd <- apply(excess.r[, rownames(res)],2, sd)
+
+res$asset <- NULL
+```
+
+# Modèle de Treynor-Black
+
+## Détermination du portefeuille actif
+
+On rappelle que le poids de chaque titre dans le portefeuille actif est proportionel au ratio $\alpha_i/\sigma^2(\epsilon_i)$:
+
+$$
+w_i = \frac{\alpha_i/\sigma^2(\epsilon_i)}{\sum_i \alpha_i/\sigma^2(\epsilon_i)}
+$$
+
+Calculer les poids des actifs dans le portefeuille actif. Justifier votre choix d'inclure ou d'exclure tel ou tel instrument.
+
+
+Calculez les valeurs suivantes concernant le portefeuille actif:
+
+\begin{description}
+\item[$R_A$] Excess de rendement
+\item[$\alpha_A$] alpha du portefeuille actif
+\item[$\beta_A$]  beta du portefeuille actif
+\item[$\sigma_A$] ecart-type du portefeuille actif
+\end{description}
+
+```{r, echo=FALSE} 
+w <- res$alpha / res$sigma.e^2
+w <- w / sum(w)
+names(w) <- rownames(res)
+
+alpha.A <- sum(w * res$alpha)
+beta.A <- sum(w * res$beta)
+R.A <- alpha.A + beta.A * r.M
+sigma2.e.A <- sum(w * res$sigma.e^2)
+sigma2.A <- beta.A^2 * sigma2.M + sigma2.e.A
+```
+
+## Détermination de la pondération entre le portefeuille actif et le portefeuille de marché.
+
+On rappelle l'allocation de richesse au portefeuille actif:
+
+$$
+w_A = \frac{\alpha_A \sigma^2_M}{\alpha_A \sigma^2_M (1-\beta_A) + R_M \sigma^2_A}
+$$
+
+Avec:
+
+$$
+\begin{aligned}
+R_A & = \alpha_A + \beta_A R_M \\
+\sigma^2_A & = \beta^2_A \sigma^2_M + \sigma^2(\epsilon_A)
+\end{aligned}
+$$
+
+```{r, echo=FALSE, eval=FALSE}
+w.A <- alpha.A * sigma2.M / (alpha.A * sigma2.M*(1-beta.A) + r.M * sigma2.A)
+w.M <- 1-w.A
+names(w.M) <- "Market"
+w <- c(w * w.A, w.M)
+kable(as.data.frame(w), "latex", booktabs=T)
+#%>% kable_styling(latex_options="scale_down")
+```
+
+```{r}
+return.port <- excess.r[, names(w)] 
+v.port <- var(return.port)
+r.port <- colMeans(return.port)
+sigma.port <- sqrt(as.vector(w %*% v.port %*% w))
+R.port <- sum(w * r.port)
+```
+
+## Capital Allocation Line
+
+Calculez l'espérance de rendement et le risque de quelques portefeuilles situés sur la "Capital Allocation Line" qui joint l'actif sans risque et le portefeuille risqué. Placez le portefeuille risqué, le portefeuille actif et le portefeuille de marché sur le graphique ci-dessous.
+
+```{r, echo=FALSE}
+plot(Mean ~ Sd, data=res, xlim=c(0, 0.4), ylim=c(0, .05), xlab=expression(sigma),
+     ylab="Excess Return", cex=.5, bty="n", cex.lab=1)
+with(res, text(Mean ~ Sd, labels=row.names(res), pos=4, cex=0.5, col="blue"))
+
+#points(sigma.port, R.port, cex=.5, col="red")
+#text(sigma.port, R.port, labels="P", pos=2, col="red")
+
+#points(sqrt(sigma2.M), r.M, cex=.5, col="green")
+#text(sqrt(sigma2.M), r.M, labels="M", pos=2, col="green")
+
+#points(sqrt(sigma2.A), R.A, cex=.5, col="yellow")
+#text(sqrt(sigma2.A), R.A, labels="A", pos=2, col="yellow")
+
+```
+

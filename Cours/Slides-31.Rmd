@@ -1,0 +1,257 @@
+---
+title: "MEDAF et Modèle de Sharpe"
+subtitle: "Analyse de Performance"
+
+author: "P. Hénaff"
+date: "3/2021"
+output:
+  beamer_presentation:
+    colortheme: dolphin
+    theme: Montpellier
+  slidy_presentation: default
+
+header-includes:
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{graphicx}
+  - \usepackage{subfig}
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{wrapfig}
+  - \usepackage{float}
+  - \usepackage{colortbl}
+  - \usepackage{pdflscape}
+  - \usepackage{tabu}
+  - \usepackage{threeparttable}
+  - \usepackage{threeparttablex}
+  - \usepackage[normalem]{ulem}
+  - \usepackage{makecell}
+  - \usepackage{xcolor}
+
+  
+bibliography: ../../library.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+```
+
+```{r load-libraries, include=FALSE, echo=FALSE}
+library(quantmod)
+library(xts)
+library(hornpa)
+library(lubridate)
+library(xtable)
+library(PerformanceAnalytics)
+library(TTR)
+library(SuppDists)
+library(lubridate)
+library(roll)
+library(Hmisc)
+library(nFactors)
+library(quadprog)
+library(knitr)
+library(kableExtra)
+library(latex2exp)
+
+get.src.folder <- function() {
+  path.expand("../GP/src")
+}
+
+get.data.folder <- function() {
+  path.expand("../GP/data")
+}
+
+source(file.path(get.src.folder(), 'utils.R'))
+source(file.path(get.src.folder(), 'FileUtils.R'))
+```
+## Droite de Marché des Capitaux (Capital Market Line)
+
+```{r cml, echo=FALSE, out.width = '100%', fig.cap="Droite de Marché des Capitaux"}
+knitr::include_graphics("capital-market-line.pdf")
+```
+
+## Rappel 
+
+Selon le modèle MV, tous les portefeuilles efficients se trouvent sur la droite
+$$
+\overline{r} = r_f + \frac{\overline{r_M} - r_f}{\sigma_M} \sigma
+$$
+Que peut on dire à propos d'un titre individuel $i$? 
+$$
+\overline{r_i} - r_f = ?
+$$
+
+## Intuition...
+
+## MEDAF
+
+\begin{equation}
+\begin{aligned}
+\mu_i - r_f &= \frac{\sigma_{M,i}}{\sigma^2_M}(\mu_M-r_f) \\
+&= \beta_i (\mu_M-r_f)
+\end{aligned}
+\end{equation}
+
+avec $\mu_i = E(r_i), \mu_M = E(r_M)$
+Bien noter qu'il s'agit ici d'une formule \textit{ex-ante}, conséquence logique du modèle MV de Markowitz. Voir note pour démonstration de la formule. 
+
+## 
+## MEDAF: Droite de Marché des Titres
+
+```{r, capm, echo=FALSE, fig.cap="Droite de Marché des Titres", fig.height=5}
+x <- runif(20, .5, 2)
+y <- .02 + .03*x + rnorm(20,0,.0025)
+plot(x,y, xlim=c(0, 2.5), ylim=c(0, .1), bty="no", pch=1, col="blue", xlab=expression(beta),
+     ylab=expression(E(r)))
+abline(a=.02, b=.03, col="red")
+```
+
+
+## Single Index Model (Sharpe)
+
+* Rendement
+  $$
+  R_i(t) = \alpha_i + \beta_i R_M(t) + e_i(t)
+  $$
+  
+* Espérance de rendement
+  $$
+  E(R_i(t)) = \alpha_i + \beta_i E(R_M(t))
+  $$
+  
+* Variance du rendement
+  $$
+  \sigma_i^2 = \beta_i^2 \sigma_M^2 + \sigma(e_i)^2
+  $$
+  
+* Covariance des rendements
+  $$
+  \mbox{cov}(R_i, R_j) = \beta_i \beta_j \sigma_M^2
+  $$
+
+## Simple actif et Portefeuille selon le SIM
+
+$$
+\begin{aligned}
+R_i(t) & = \alpha_i + \beta_i R_M(t) + \epsilon_i(t) \\
+\sigma_i^2 & = \beta_i^2 \sigma_M^2 + \sigma_{\epsilon_i}^2 
+\end{aligned}
+$$
+
+
+
+
+Soit un portefeuille de $n$ actifs avec $w_i = \frac{1}{n}$.
+
+$$
+\begin{aligned}
+R_P(t) & = \alpha_P + \beta_P R_M(t) + \epsilon_P(t) \\
+\sigma_P^2 & = \beta_P^2 \sigma_M^2 + \sigma_{\epsilon_P}^2 \\
+\end{aligned}
+$$
+
+## Division du travail en Gestion de Portefeuille
+
+* Espérance de rendement
+  $$
+  E(R_i(t)) = \alpha_i + \beta_i E(R_M(t))
+  $$
+  
+* Variance du rendement
+  $$
+  \sigma_i^2 = \beta_i^2 \sigma_M^2 + \sigma(e_i)^2
+  $$
+
+## Illustration numérique
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE}
+monthly.ret.file <- "./monthly.ret.rda"
+tickers <- c("AAPL", "AMZN", "MSFT", "F", "SPY", "QQQ", "XOM", "MMM", "HD", "PG", "KO")
+if(!file.exists(monthly.ret.file)) {
+monthly.ret <- NULL
+for(t in tickers) {
+  p <- getSymbols(t, auto.assign = FALSE)
+  tmp <- monthlyReturn(p[, 6])
+  colnames(tmp) <- t
+  if(is.null(monthly.ret)) {
+    monthly.ret <- tmp
+  } else {
+    monthly.ret <- cbind(monthly.ret, tmp)
+  }
+}
+monthly.ret <- removeNA(monthly.ret)
+save(monthly.ret, file='monthly.ret.rda')
+}
+load(monthly.ret.file)
+```
+
+```{r}
+kable(table.Stats(monthly.ret), "latex", booktabs=T) %>% kable_styling(latex_options="scale_down")
+```
+
+## Droite de marché des titres(Security Market Line)
+
+```{r, echo=F}
+# regress each asset on market
+asset.tickers <- c("AAPL", "AMZN", "MSFT", "XOM", "MMM", "HD", "PG", "KO")
+avg.ret <- colMeans(monthly.ret[, asset.tickers])
+n <- length(asset.tickers)
+beta <- vector("numeric", n)
+alpha <- vector("numeric", n)
+sd.eps <- vector("numeric", n)
+
+for(i in seq(n)) {
+  res = lm(as.formula(paste(asset.tickers[i], "~ SPY ")), data=monthly.ret)
+  beta[i] = res$coefficients[2]
+  alpha[i] = res$coefficients[1]
+  sd.eps[i] = sd(res$residuals)
+}
+
+reg <- lm(avg.ret ~ beta)
+plot(beta, avg.ret, xlab=expression(beta), ylab=expression(mu), col='red', 
+      ylim=c(0, 0.04), xlim=c(.3, 1.40), bty='n', cex.lab=1.5)
+abline(reg, col='green')     
+for(i in seq_along(asset.tickers)) {
+  text(beta[i], avg.ret[i], asset.tickers[i], cex=1.2, col="blue", pos=4, offset=0.5)
+}
+```
+
+
+## MSFT & SPY
+
+```{r}
+plot(monthly.ret[,c("MSFT", "SPY")])
+```
+
+## Calcul de $\beta$
+
+```{r, echo=TRUE}
+beta_roll <- removeNA(rollapply(data=monthly.ret$MSFT, Rb=monthly.ret$SPY,
+                                FUN=CAPM.beta, width=36, by=1))
+```
+
+```{r, fig.height=5}
+plot(beta_roll)
+```
+
+## Calcul de $\alpha$
+
+```{r, echo=TRUE}
+alpha_roll <- removeNA(rollapply(data=monthly.ret$MSFT, Rb=monthly.ret$SPY, 
+                                 FUN=CAPM.alpha, width=36, by=1))
+```
+```{r, fig.height=5}
+plot(alpha_roll)
+```
+
+
+## Bibliographie
+
+Grinhold, R.C. and Kahn, R. Active Portfolio Management, Mc Graw-Hill, 2000

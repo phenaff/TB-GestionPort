@@ -1,0 +1,218 @@
+---
+title: "Model Risk"
+author: "P. Hénaff"
+date: "3/2021"
+output:
+  beamer_presentation:
+    colortheme: dolphin
+    theme: Montpellier
+  slidy_presentation: default
+
+header-includes:
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{graphicx}
+  - \usepackage{subfig}
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{wrapfig}
+  - \usepackage{float}
+  - \usepackage{colortbl}
+  - \usepackage{pdflscape}
+  - \usepackage{tabu}
+  - \usepackage{threeparttable}
+  - \usepackage{threeparttablex}
+  - \usepackage[normalem]{ulem}
+  - \usepackage{makecell}
+  - \usepackage{xcolor}
+
+  
+bibliography: ../../library.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+```
+
+```{r load-libraries, include=FALSE, echo=FALSE}
+library(lubridate)
+library(knitr)
+library(kableExtra)
+library(latex2exp)
+
+get.src.folder <- function() {
+   path.expand("../GP/src")
+ }
+ 
+ get.data.folder <- function() {
+   path.expand("../GP/data")
+ }
+
+ source(file.path(get.src.folder(), 'utils.R'))
+ source(file.path(get.src.folder(), 'FileUtils.R'))
+```
+
+## Le Modèle Moyenne-Variance
+
+$$
+\begin{aligned}
+    w^* = \mbox{argmin}\ \  &  w^T \Sigma w \\
+    \mbox{s.t.} & \\
+    & \mu^T w = \mu^* \\
+\end{aligned}
+$$
+Equivalent à:
+
+$$
+\begin{aligned}
+w^* & = \mbox{argmin}\ \   \frac{1}{2} w^T \Sigma w - \gamma x^T\mu \\
+& = \gamma \Sigma^{-1} \mu
+\end{aligned}
+$$
+
+## Decomposition de $\Sigma$ et $\Sigma^{-1}$
+
+$$
+\begin{aligned}
+\Sigma & = V \Omega V^T \\
+\Sigma^{-1} & = V \Omega^{-1} V^T \\
+& = \mathcal{I}
+\end{aligned}
+$$
+
+
+
+## Exemple 1
+
+```{r}
+sigma <- c(.1, .2, .3)
+rho <- matrix(c(1,.8, .7,.8, 1, .6, .7, .6, 1), nrow = 3)
+Sigma <- diag(sigma) %*% rho %*% diag(sigma)
+e <- eigen(Sigma)
+ei <- eigen(solve(Sigma))
+```
+
+$$
+\Sigma = \mbox{diag}(\sigma) \times \mathrm{P} \times \mbox{diag}(\sigma) \ \ \sigma = `r write_matex2(as.matrix(sigma, 1))` \ \ \mathrm{P}= `r write_matex2(rho)`
+$$
+
+
+```{r table-1, echo=FALSE}
+mat.1<- rbind(e$vectors, e$values)
+mat.2<- rbind(ei$vectors, ei$values)
+mat <- cbind(mat.1, mat.2)
+
+rownames(mat) <- c("1", "2", "3", " ")
+colnames(mat) <- rep(c("V1", "V2", "V3"),2)
+kbl(mat, format="latex", booktabs=TRUE, digits = 4) %>%
+  kable_classic() %>%
+  add_header_above(c(" " = 1, "$\\\\Sigma$" = 3, "$\\\\Sigma^{-1}$"=3), escape=F) %>%
+  pack_rows("Eigenvectors", 1,3) %>%
+  pack_rows("Eigenvalues", 4,4)
+```
+## Exemple 2
+
+```{r}
+sigma <- c(.1, .2, .3)
+rho <- matrix(c(1,.9, .85,.9, 1, .8, .85, .8, 1), nrow = 3)
+Sigma <- diag(sigma) %*% rho %*% diag(sigma)
+e <- eigen(Sigma)
+ei <- eigen(solve(Sigma))
+```
+
+$$
+\sigma = `r write_matex2(as.matrix(sigma, 1))` \ \ \rho= `r write_matex2(rho)`
+$$
+
+
+```{r table-11, echo=FALSE}
+mat.1<- rbind(e$vectors, e$values)
+mat.2<- rbind(ei$vectors, ei$values)
+mat <- cbind(mat.1, mat.2)
+
+rownames(mat) <- c("1", "2", "3", " ")
+colnames(mat) <- rep(c("V1", "V2", "V3"),2)
+kbl(mat, format="latex", booktabs=TRUE, digits = 4) %>%
+  kable_classic() %>%
+  add_header_above(c(" " = 1, "$\\\\Sigma$" = 3, "$\\\\Sigma^{-1}$"=3), escape=F) %>%
+  pack_rows("Eigenvectors", 1,3) %>%
+  pack_rows("Eigenvalues", 4,4)
+```
+
+
+```{r table-21, echo=FALSE}
+mat <- rbind(ei$vectors, ei$values)
+rownames(mat) <- c("Values", "1", "2", "3")
+colnames(mat) <- c("V1", "V2", "V3")
+kable(mat)
+```
+
+## Retour sur l'ACP
+
+```{r, cor-2, echo=FALSE, warning=FALSE, message=FALSE, cache=TRUE} 
+## NASDAQ
+folder <- 'NASDAQ'
+tickers <- get.tickers(folder)[1:200]
+ts.all <- get.all.ts(folder, tickers, dt.start = dmy('01Mar2007'), combine = TRUE)
+```
+
+```{r, cor-3, echo=FALSE}
+nb.obs <- 252
+
+dt.start <- dmy("01Aug2009")
+idx.start <- closest.index(ts.all, dt.start)
+idx <- seq(idx.start, length.out=nb.obs)
+
+res.pca.1 <- prcomp(ts.all[idx,], scale=TRUE)
+
+# normalized eigenvalues
+ev <- res.pca.1$sdev
+```
+
+```{r, cor-4, echo=FALSE, fig.height=5}
+barplot(ev, main="PCs of 200 NASDAQ stocks, August 2009", names.arg=seq_along(ev), ylim=range(pretty(c(0, ev))))
+```
+
+## Interprétation de $\mathcal{I}$  (I)
+
+Modèle multifacteur pour le rendement:
+
+$$
+R_{i,t} = \beta_0 + \beta_i^T R_t^{(-i)} + \epsilon_{i,t}
+$$
+avec $R_t^{(-i)}$ vecteur de rendement de tous les actifs sauf l'actif $i$, $\epsilon_{i,t} \sim \mathcal{N}(0, s_i^2)$
+
+Voir l'article de Stevens. La matrice d'information $\mathcal{I}$ est de la forme:
+
+$$
+\begin{aligned}
+\mathcal{I}_{i,i} & = \frac{1}{\sigma^2_i(1-R_i^2)} \\
+\mathcal{I}_{i,j} & = -\frac{\beta_{i,j}}{\sigma^2_i(1-R_i^2)} \\
+ & = -\frac{\beta_{j,i}}{\sigma^2_j(1-R_j^2)}
+ \end{aligned}
+$$
+ 
+ 
+## Interprétation de $\mathcal{I}$ (II)
+ 
+Ce qui donne une expression simple pour $w_i$, le poid de l'actif $i$ dans le portefeuille optimal:
+ 
+$$
+ w_i(\gamma) = \gamma \frac{\mu_i - \beta_i^T \mu_i^{(-i)}}{s_i^2}
+$$
+ 
+## Conséquences pour le portefeuille optimal MV
+
+- Plus l'actif $i$ est bien répliqué par les autres actifs, plus forte est la pondération dans le portefeuille MV
+- Le signe de $w_i$ est déterminé par la différence entre le rendement espéré du titre et de celui du portefeuille de couverture. 
+
+le portefeuille optimal MV de Markowitz ne procure pas une diversification des facteurs de risque, mais réalise une concentration du risque sur les facteurs d'arbitrage (sur les actifs qui peuvent être très bien répliqués par d'autres actifs de l'univers des titres) 
+
+## Bibliographie
+
