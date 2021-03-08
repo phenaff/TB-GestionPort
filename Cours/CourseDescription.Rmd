@@ -8,8 +8,8 @@ output:
       in_header: preamble.tex
 geometry: margin=1in
 
-bibliography: ../library.bib
-csl: ../apa.csl
+bibliography: ../../library.bib
+csl: ../../apa.csl
 nocite: |
   @Wurtz2015
 
@@ -51,15 +51,15 @@ Le principe général du cours est celui de la "classe inversée". Il y a 8 modu
 
 - avant le cours, chacun étudie les documents mis à disposition (articles, chapitre du manuel)
 
-- le module commence par une video-conférence pour résumer le sujet et répondre aux questions,
+- le module commence par une vidéo-conférence pour résumer le sujet et répondre aux questions,
 
 - en groupe de 3 ou 4, les étudiants réalisent ensuite les travaux pratiques propres à chaque module, sous forme de notebooks "Rmarkdown". Tous les documents nécessaires se trouveront sur GitHub en temps utile, dans le dépot public \texttt{phenaff/TB-GestionPort}.
 
-- après chaque journée (deux modules), le travail est restitué lors d'une visio-conférence, deux ou trois groupes à la fois (on verra à l'usage), soit une dizaine étudiants et l'enseignant. Chaque groupe désigne un "ambassadeur" pour chaque visio-conférence, charge à elle ou lui de relayer les questions du groupe dans un premier temps. Tout le monde aura bien sûr l'occasion de s'exprimer. 
+- après chaque journée (deux modules), le travail est restitué lors d'une vidéo-conférence, deux ou trois groupes à la fois (on verra à l'usage), soit une dizaine étudiants et l'enseignant. Chaque groupe désigne un "ambassadeur" pour chaque vidéo-conférence, charge à elle ou lui de relayer les questions du groupe dans un premier temps. Tout le monde aura bien sûr l'occasion de s'exprimer. 
 
 # Evaluation
 
-Chaque groupe choisit de rendre 4 TP parmi les 8 proposés, chaque TP comptant pour 25\% de la note, qui sera commune à tous les membres du groupe. Les TP sont à réaliser en notebook "Rmarkdown" [@Xie2019] et à rendre au format .pdf. Vous rendrez également le code source .rmd. "Rmarkdown" est une technologie très utile à maîtriser, car elle permet de produire des analyses *reproduisibles*, avec une mise en page de grande qualité. La présentation et mise en page des documents devra donc être soignée, et sera prise en compte dans l'évaluation. Les TP sont à rendre 10 jours après le module correspondant.
+Chaque groupe choisit de rendre 4 TP parmi les 8 proposés, chaque TP comptant pour 25\% de la note, qui sera commune à tous les membres du groupe. Les TP sont à réaliser en notebook "Rmarkdown" [@Xie2019] et à rendre au format .pdf. Vous rendrez également le code source .rmd. "Rmarkdown" est une technologie très utile à maîtriser, car elle permet de produire des analyses *reproductibles*, avec une mise en page de grande qualité. La présentation et mise en page des documents devra donc être soignée, et sera prise en compte dans l'évaluation. Les TP sont à rendre 15 jours après le module correspondant.
 
 # Roles dans chaque groupe de travail
 
@@ -69,13 +69,13 @@ Comme indiqué plus haut, à l'occasion de chaque vidéo conférence, chaque gro
 
 1. Approfondir les propriétés statistiques des séries chronologiques financières.
 
-2. Maitriser le modèle classique "moyenne-variance" de Markowitz[@Markowitz1952], et comprendre ses limites. Savoir le mettre en oeuvre et analyser les résultats. Appréhender comment le modèle de Black-Litterman répond à certaines limitations du modèle de Markowitz. 
+2. Maitriser le modèle classique "moyenne-variance" de Markowitz[@Markowitz1952], et comprendre ses limites. Savoir le mettre en œuvre et analyser les résultats. Appréhender comment le modèle de Black-Litterman répond à certaines limitations du modèle de Markowitz. 
 
 3. Comprendre l'apport de l'approche factorielle en gestion de portefeuille.
 
 4. Appréhender les nouvelles approches de gestion fondées sur le "risk budgeting".
 
-5. Réaliser un rapide survol des méthodes de gestion de portefeuille obligataire: immunizaion et dédication.
+5. Réaliser un rapide survol des méthodes de gestion de portefeuille obligataire: couverture en sensibilité et adossement des flux.
 
 # Logiciel
 
@@ -110,7 +110,7 @@ TP 1:
 
 ## Module 2 (10/2): La théorie classique [@Markowitz1952]
 
-On considère ici le travail d'Harry Markowitz, qui établit les fondements de la gestion quantitative. Ce modèle est important car il a défini le vocabulaire et les concepts de base qui sont toujours d'actualité. 
+On considère ici le travail d'Harry Markowitz, qui établit les fondements de la gestion quantitative. Ce modèle reste  important car il a défini le vocabulaire et les concepts de base qui sont toujours d'actualité. 
 
 Documents à lire avant le cours:
 
@@ -124,48 +124,46 @@ TP 2:
 - Construction d'une frontière efficiente.
 - Construction d'un portefeuille optimal moyenne/variance.
 
-## Module 3 (9/3): Modèle de Treynor-Black et la distinction "gestion active/gestion passive" [@Treynor1973].
+## Module 3 (9/3): MEDAF, modèle à un facteur et mesure de performance. Modèle de Treynor-Black. Distinction "gestion active/gestion passive". [@Treynor1973].
 
-Le modèle de Treynor-Black est une étape importante, car il est à l'origine de la distinction  "gestion active/gestion passive".
+Le modèle MEDAF (CAPM) et son pendant empirique, le modèle de marché à un facteur sont tous les deux dûs à W. Sharpe. Ces modèles sont toujours importants aujourd'hui car ils servent de base aux mesures de performance des portefeuilles et des stratégies d'investissement. Dérivé lui aussi des travaux de Markowitz, le modèle de Treynor-Black est aussi une avancée importante, car il est à l'origine de la distinction  "gestion active/gestion passive". Ce sont néanmoins des modèles fragiles, on les étudie aujourd'hui plus à cause du vocabulaire qu'ils ont introduit que pour leur utilité pratique.
 
 Documents à lire avant le cours:
 
 - Article de Treynor & Black (1973)
 - Chapitre 5 de Pfaff (2016)
-
+- Notes sur les mesures de performance
 
 TP 3:
 
 - Construction d'un modèle à 1 facteur
 - Optimisation de portefeuille selon Treynor-Black
+- Mesure de performance
 
-## Module 4 (9/3): Risque de modélisation. [@Boyle2012; ]
+## Module 4 (9/3): Modèle de Treynor Black (suite). Risque de modélisation. [@Boyle2012; @Ste1997]
 
-Identification du "risque de modélisation" dans le cadre du modèle moyenne/variance. 
+Identification du "risque de modélisation" dans le cadre du modèle moyenne/variance, et en particulier du risque
+lié à l'utilisation de la matrice de covariance.
 
-- Risque lié à l'estimation des paramètres
-- Risque lié à la formulation même du modèle
+Documents à lire avant le cours:
 
-On passera en revue les méthodes d'estimation robustes et quelques formulations alternatives du couple rendement/risque.
+- Articles cités
+- Chapitre 10 de Pfaff (2016)
 
-TP-4 (version 1):
-
-- Mettre en oeuvre le modèle de Kono et Yamazaki
-
-TP-4 (version 2):
+TP 4:
 
 - Impact de la matrice de covariance sur les résultats de modèle moyenne-variance.
 
 ## Module 5 (10/3): Modèle de Black-Litterman. [@He2005]
 
-Le modèle de Black-Litterman et ses nombreuses extensions est très prisé des gestionnaires du fait de sa flexibilité. Il permet également de limiter les risques de modélisation identifiés précédement.
+Le modèle de Black-Litterman et ses nombreuses extensions est très prisé des gestionnaires du fait de sa flexibilité. Il permet également de limiter les risques de modélisation identifiés précédemment.
 
 Documents à lire avant le cours:
 
-- Chapitre 10 de Pfaff (2016)
-- article de Litterman et He
+- Chapitre 13.3 de Pfaff (2016)
+- Article de Litterman et He
 
-TP-5:
+TP 5:
 
 - Comparaison du modèle M/V et du modèle de Black-Litterman.
 
@@ -176,24 +174,38 @@ TP-5:
 - Estimation et limites statistiques
 - Modèles d'allocation factoriels
 
-TP-6:
+Documents à lire avant le cours:
+
+- Article cités
+
+TP 6:
 
 - Construction de portefeuille à partir du modèle à trois facteurs de Fama-French.
 
 ## Module 7 (23/3): Méthodes récentes de gestion de portefeuille, "risk budgeting" [@Bruder2012]
 
+
 - Modèle 1/N
 - Modèle "risk parity"
 
-TP-7:
+Documents à lire avant le cours:
+
+- Chapitre 11 de Pfaff (2016)
+- Article de Bruder et Roncalli
+
+TP 7:
 
 - calcul de portefeuilles selon des méthodes de "risk budgeting"
 
 ## Module 8 (23/3): Gestion de portefeuille obligataire: Immunisation et dédication [@Henaff2012].
 
-- Survol du problème de gestion obligataire et des approches classiques: immunisation et dédication.
+Survol du problème de gestion obligataire et des approches classiques: couverture en sensibilité et adossement des flux.
 
-TP-8:
+Documents à lire avant le cours:
+
+- Chapitre 6 "Fixed Income Risk Management" 
+
+TP 8:
 
 - Construction d'un portefeuille obligataire par programmation linéaire.
 
