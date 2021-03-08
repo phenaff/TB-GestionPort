@@ -1,8 +1,8 @@
 ---
 title: "Gestion de Portefeuille"
-subtitle: "TP-3: Modèle de Treynor Black"
+subtitle: "TP-3: Modèle à un facteur et modèle de Treynor Black"
 author: Patrick Hénaff
-date: "Février-Mars 2021"
+date: "Février-Mars 2020"
 output: 
   pdf_document:
     keep_tex: true
@@ -13,12 +13,13 @@ geometry: margin=1in
 header-includes:
   - \usepackage[utf8]{inputenc}
 
-bibliography: ../library.bib
-csl: ../apa.csl
+bibliography: ../../library.bib
+csl: ../../apa.csl
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+
 ```
 
 ```{r load-libraries, include=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
@@ -26,7 +27,6 @@ library(xts)
 library(hornpa)
 library(lubridate)
 library(xtable)
-library(quantmod)
 library(PerformanceAnalytics)
 library(TTR)
 library(lubridate)
@@ -35,102 +35,87 @@ library(Hmisc)
 library(nFactors)
 library(kableExtra)
 library(broom)
-
-get.src.folder <- function() {
-  path.expand("../GP/src")
-}
-
-get.data.folder <- function() {
-  path.expand("../GP/data")
-}
-
-source(file.path(get.src.folder(), 'utils.R'))
-source(file.path(get.src.folder(), 'FileUtils.R'))
+library(quadprog)
 ```
 
 # Données
 
-## Séries de rendement quotidien pour 11 valeurs:
+## Séries de rendement mensuel pour 11 valeurs:
 
 ```{r, eval=TRUE, echo=TRUE, warning=FALSE}
-monthly.ret.file <- file.path(get.data.folder(), "monthly.ret.rda")
+monthly.ret.file <- "./monthly.ret.rda"
 load(monthly.ret.file)
-```
-
-Pour l'indice de marché, on utilise VT, un ETF "World Market":
-
-```{r, echo=TRUE, warning=FALSE}
-VT.series.file <- file.path(get.data.folder(), "ret.VT.rda")
-
-if(!file.exists(VT.series.file)) {
-  
-sym <- "VT"
-world.index <- Ad(getSymbols(sym, auto.assign=FALSE))
-world.index.ret <- monthlyReturn(world.index)
-colnames(world.index.ret) <- "Market"
-save(world.index.ret, file=VT.series.file)
-} else {
-  load(VT.series.file)
-}
-```
-
-
-## Rendement moyen:
-
-```{r, echo=TRUE}
-monthly.ret <- merge.xts(monthly.ret, world.index.ret, join="inner")
-kable(colMeans(monthly.ret), "latex", escape=FALSE, col.names=c("$r$"), caption="Average monthly return", booktabs=T)%>% kable_styling(latex_options=c("striped", "HOLD_position"))
+index(monthly.ret) <- floor_date(index(monthly.ret), "month")
 ```
 
 ## Matrice de covariance des rendements:
 
 ```{r, echo=TRUE}
 kable(cov(monthly.ret), "latex", booktabs=T) %>%
-kable_styling(latex_options="scale_down")
+kable_styling(latex_options=c("scale_down", "HOLD_position"))
 ```
 
-## taux sans risque
-
-Le taux sans risque mensuel (annualisé) est obtenu de la Réserve Fédérale US.
+## Rendement moyen mensuel
 
 ```{r, echo=TRUE}
-taux.sans.risque.csv <- file.path(get.data.folder(), "DP_LIVE_01032020211755676.csv")
-tmp <- read.csv(taux.sans.risque.csv, header=TRUE, sep=";")[, c("TIME", "Value")]
-dt <- ymd(paste(tmp$TIME, "-01", sep=""))-1
-rf_rate <- xts(tmp$Value/100.0, dt)
+kbl(colMeans(monthly.ret), format="latex", booktabs=T, 
+    col.names=c("Rendement"), caption="Rendement moyen mensuel") %>%
+    kable_styling(latex_options="HOLD_position")
 ```
 
-```{r, echo=FALSE}
+
+## Taux sans risque
+
+Le taux sans risque mensuel est obtenu de la Réserve Fédérale US. A diviser par 12 pour être cohérent avec les rendement des titres.
+
+```{r, echo=TRUE}
+tmp <- read.csv("DP_LIVE_01032020211755676.csv", header=TRUE, sep=";")[, c("TIME", "Value")]
+dt <- ymd(paste(tmp$TIME, "-01", sep=""))
+rf_rate <- xts((tmp$Value/100.0)/12, dt)
+colnames(rf_rate) <- "Rf"
+monthly.ret.2 <- merge.xts(monthly.ret, rf_rate, join="inner")
+```
+```{r, fig.cap="taux sans risque mensuel"}
 plot(rf_rate)
 ```
 
-```{r, echo=FALSE}
-colnames(rf_rate) <- "Rf"
-monthly.ret.2 <- merge.xts(monthly.ret, rf_rate/12, join="inner")
-head(monthly.ret.2)
-```
-
-
 # Estimation d'un modèle à un facteur
 
-Choisir une période de 48 mois. A partir des exemples présentés en cours, évaluer le modèle:
-
+- Utiliser l'indice SPY comme proxy pour le marché et estimer pour chaque titre le modèle:
 
 $$
 R_i(t) - R_f(t) = \alpha + \beta (R_M(t) - R_f(t)) + \epsilon(t)
 $$
+en utilisant la fonction \texttt{lm}.
+- Placer chaque titre sur un diagramme rendement/beta et calculer par regression la droite de marché des titres risqués. 
+- En déduire les titres qui, selon ce modèle, *semblent* chers et ceux qui semblent sous-évalués. 
 
-en utilisant la fonction \texttt{lm}. Utilisez la fonction \texttt{kable} de \texttt{knitr} pour produire une présentation soignée des résultats.
+Est-ce que ces mesures de cherté relative vous semble correctes? Essayez de mesurer la robustesse de ce calcul en estimant le modèles sur des sous-intervalles de temps.
 
-# Détermination du portefeuille actif
+Présentez vos résultats de manière synthétique.
 
-On rappelle que le poids de chaque titre dans le portefeuille actif est proportionnel au ratio $\alpha_i/\sigma^2(\epsilon_i)$:
+
+# Modèle de Treynor-Black
+
+Le modèle de Treynor-Black a pour objectif d'exploiter les informations calculées en première partie. L'idée étant de constituer un portefeuille "actif" avec les titres qui semblent mal valorisés par le marché, et allouer le reste de sa richesse au portefeuille de marché.
+
+## Selection des titres à inclure dans le portefeuille actif.
+
+C'est l'étape délicate de la méthode de Treynor-Black. A partir de l'évaluation du modèle à un facteur, déterminez quels titres méritent de figurer dans le portefeuille actif. En théorie, on a envie d'acheter les titres sous-cotés ($\alpha_i > 0$) mais cette anomalie n'est peut être qu'apparente! Il faut également apprécier la qualité de l'estimation statistique. 
+
+En testant diverses combinaisons de titres à mettre dans le portefeuille actif, vous pourrez mesurer la sensibilité de modèle de Treynor-Black aux données.
+
+## Détermination du portefeuille actif
+
+Ayant choisi les titres à inclure dans le portefeuille actif,
+on rappelle que le poids de chaque titre dans le portefeuille actif est proportionnel au ratio $\alpha_i/\sigma^2(\epsilon_i)$:
 
 $$
 w_i = \frac{\alpha_i/\sigma^2(\epsilon_i)}{\sum_i \alpha_i/\sigma^2(\epsilon_i)}
 $$
 
 Calculer les poids des actifs dans le portefeuille actif. Justifier votre choix d'inclure ou d'exclure tel ou tel instrument.
+
 
 Calculez les valeurs suivantes concernant le portefeuille actif:
 
@@ -139,14 +124,17 @@ Calculez les valeurs suivantes concernant le portefeuille actif:
 \item[$\alpha_A$] alpha du portefeuille actif
 \item[$\beta_A$]  beta du portefeuille actif
 \item[$\sigma_A$] ecart-type du portefeuille actif
+\item[$\sigma^2(e_A)$] variance résiduelle du portefeuille actif
+
 \end{description}
 
-# Détermination de la pondération entre le portefeuille actif et le portefeuille de marché.
+
+## Détermination de la pondération entre le portefeuille actif et le portefeuille de marché.
 
 On rappelle l'allocation de richesse au portefeuille actif:
 
 $$
-w_A = \frac{\alpha_A \sigma^2_M}{\alpha_A \sigma^2_M (1-\beta_A) + R_M \sigma^2_A}
+w_A = \frac{\alpha_A \sigma^2_M}{\alpha_A \sigma^2_M (1-\beta_A) + R_M \sigma^2(e_A)}
 $$
 
 Avec:
@@ -154,15 +142,16 @@ Avec:
 $$
 \begin{aligned}
 R_A & = \alpha_A + \beta_A R_M \\
-\sigma^2_A & = \beta^2_A \sigma^2_M + \sigma^2(\epsilon_A)
+\sigma^2_A & = \beta^2_A \sigma^2_M + \sigma^2(e_A)
 \end{aligned}
 $$
 
-Que penser de l'importance accordée au portefeuille actif? 
 
-# Capital Allocation Line
 
-Calculez l'espérance de rendement et le risque de quelques portefeuilles situés sur la "Capital Allocation Line" qui joint l'actif sans risque et le portefeuille risqué. Placez le portefeuille risqué, le portefeuille actif et le portefeuille de marché sur un graphique "excédent de rendement/risque", ci-dessous.
+## Capital Allocation Line
+
+Calculez l'espérance de rendement et le risque de quelques portefeuilles situés sur la "Capital Allocation Line" qui joint l'actif sans risque et le portefeuille tangent. Placez la solution du modèle de Treynor-Black, le portefeuille actif et le portefeuille de marché sur le graphique ci-dessous.
+
 
 ```{r, echo=TRUE}
 Assets <- c("AAPL", "AMZN", "MSFT", "F",  "XOM", "MMM",  "HD",   "PG",   "KO")
@@ -179,7 +168,6 @@ rownames(res) <- Assets
 ```{r, echo=TRUE}
 plot(Mean ~ Sd, data=res, xlim=c(0, 0.4), ylim=c(0, .05), xlab=expression(sigma),
      ylab="Excess Return", cex=.5, bty="n", cex.lab=1)
-with(res, text(Mean ~ Sd, labels=row.names(res), pos=4, cex=0.5, col="blue"))
+with(res, text(Mean ~ Sd, labels=row.names(res), pos=4, cex=0.7, col="blue"))
 
 ```
-
