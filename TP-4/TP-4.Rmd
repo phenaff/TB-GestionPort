@@ -1,0 +1,111 @@
+---
+title: "Gestion de Portefeuille"
+subtitle: "TP-4: Impact de la matrice de covariance dans le modèle MV"
+author: Patrick Hénaff
+date: "Février-Mars 2021"
+output: 
+  pdf_document:
+    keep_tex: true
+    fig_caption: yes
+    latex_engine: pdflatex
+    extra_dependencies: ["float"]
+geometry: margin=1in
+
+header-includes:
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
+
+bibliography: ../../library.bib
+csl: ../../apa.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.pos = "h", out.extra = "")
+```
+
+```{r load-libraries, include=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+library(xts)
+library(hornpa)
+library(lubridate)
+library(xtable)
+library(quantmod)
+library(PerformanceAnalytics)
+library(TTR)
+library(lubridate)
+library(roll)
+library(Hmisc)
+library(nFactors)
+library(kableExtra)
+library(broom)
+
+get.src.folder <- function() {
+  path.expand("../GP/src")
+}
+
+get.data.folder <- function() {
+  path.expand("../GP/data")
+}
+
+source(file.path(get.src.folder(), 'utils.R'))
+source(file.path(get.src.folder(), 'FileUtils.R'))
+```
+
+# Données
+
+On utilise la base de données "MultiAsset" du paquet FRAPO:
+
+```{r, echo=T, message=FALSE, warning=FALSE}
+library(FRAPO)
+data(MultiAsset)
+R <- returnseries(MultiAsset, percentage=F, trim=T)
+```
+
+Quelques statistiques descriptives sont résumées ci-dessous:
+
+```{r ret-moments, echo=FALSE}
+statNames <- c("mean", "std dev", "skewness", "kurtosis")
+symbols <- colnames(R)
+mo <- matrix(NA, nrow=length(symbols), ncol=length(statNames))
+n <- 1
+for(s in symbols) {
+  ts <- R[, s]
+  mo[n,] <- c(mean(ts), sd(ts), skewness(ts), kurtosis(ts))
+  n <- n+1
+}
+
+colnames(mo) <- statNames
+rownames(mo) <- symbols
+```
+
+```{r show-stats, echo=FALSE}
+kbl(mo, "latex", caption="Summary Statistics", booktabs=T) %>%
+  kable_styling(latex_options=c("stripped", "HOLD_position"))
+```
+\ 
+
+## Etude de la matrice de covariance
+
+On se propose d'étudier la matrice de covariance à l'aide de la formule de Stevens pour la matrice d'information $\mathcal{I} = \Sigma^{-1}$.
+
+- Pour chaque actif, estimer le modèle 
+
+$$
+R_{i,t} = \beta_0 + \beta_i^T R_t^{(-i)} + \epsilon_{i,t}
+$$
+avec $R_t^{(-i)}$ vecteur de rendement de tous les actifs sauf l'actif $i$, $\epsilon_{i,t} \sim \mathcal{N}(0, s_i^2)$
+
+- Trier les modèles par $R_i^2$ décroissant. En déduire les actifs qui sont susceptibles de recevoir un poids important dans le portefeuille optimal MV.
+
+- Calculer les poids optimaux du modèle MV, et comparer avec les résultats des régressions.
+
+
+## Lien avec l'ACP
+
+- Effectuer une ACP de la matrice de covariance des rendements.
+
+- Identifier un vecteur propre qui est un facteur d'arbitrage caractérisé
+
+- Faire le lien entre cette observation et les poids optimaux du modèle MV.
+
