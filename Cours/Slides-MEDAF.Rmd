@@ -251,7 +251,71 @@ alpha_roll <- removeNA(rollapply(data=monthly.ret$MSFT, Rb=monthly.ret$SPY,
 plot(alpha_roll)
 ```
 
+## Attribution de Performance (1)
 
-## Bibliographie
++ t=0: Achat d'une action à 50E
++ t=1: Dividende reçu: 2E, achat d'une action à 53E
++ t=2: Dividende reçu: 4E, valeur de marché d'une action: 54E
 
-Grinhold, R.C. and Kahn, R. Active Portfolio Management, Mc Graw-Hill, 2000
+Rendement annuel?
+
+
+## Quels Indicateurs de Risque?
+
+```{r expert, echo=FALSE, out.width = '100%', fig.height=4.5, fig.cap="Indicateurs de Risque"}
+knitr::include_graphics("Selection_026.png")
+```
+
+## Quels Indicateurs de Risque?
+
++ Sharpe: $(r_P - r_f)/\sigma_P$
++ Treynor:$(r_P - r_f)/\beta_P$
++ IR: $\alpha_P / \sigma(e_P)$
+
+
+## Diagramme Rendement / Risque 
+
+```{r rdt-risque, echo=FALSE, out.width = '100%', fig.height=4.5, fig.cap="Couple Rdt/Risque"}
+knitr::include_graphics("Selection_028.png")
+```
+
+
+
+## Attribution de Performance: Timing
+
+```{r rdt-risque-2, echo=FALSE, out.width = '100%', fig.height=4.5, fig.cap="Beta haussier/baissier"}
+knitr::include_graphics("Selection_032.png")
+```
+
+## Timing = Call sur le marché
+
+## Attribution de Performance: Allocation et Selection
+
+$i$: indice de la classe d'actif.
+
+Benchmark
+
+$$
+r_B = \sum_i w_{Bi} r_{Bi}
+$$
+
+Portefeuille
+
+$$
+r_P = \sum_i w_{Pi} r_{Pi}
+$$
+
+## Attribution de Performance: Allocation et Selection
+
+Contribution de la classe $i$ =
+
+$$
+\begin{aligned}
+& w_{Pi} r_{Pi} - w_{Bi} r_{Bi}  = \\
+& (w_{Pi} - w_{Bi}) r_{Bi}  \ \ \ \ \mbox{allocation} \\
++ & w_{Pi}(r_{Pi} - r_{Bi}) \ \ \ \ \mbox{selection} 
+\end{aligned}
+$$
+
+
+

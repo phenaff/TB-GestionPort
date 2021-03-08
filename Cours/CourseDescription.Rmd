@@ -102,6 +102,10 @@ Documents à lire avant le cours:
 - Note de cours "conditional probability"
 - Chapitre 3 de Pfaff (2016)
 
+Documents:
+
+- slides-1.pdf
+
 TP 1:
 
 - Observation des faits stylisés.
@@ -118,6 +122,10 @@ Documents à lire avant le cours:
 - Note de cours
 - Chapitre 5 de Pfaff (2016)
 
+Documents:
+
+- slides-2.pdf
+- Notes-MV.pdf
 
 TP 2:
 
@@ -134,11 +142,15 @@ Documents à lire avant le cours:
 - Chapitre 5 de Pfaff (2016)
 - Notes sur les mesures de performance
 
+Documents:
+
+- slides-MEDAF.pdf
+- Notes-CAPM.pdf
+
 TP 3:
 
 - Construction d'un modèle à 1 facteur
 - Optimisation de portefeuille selon Treynor-Black
-- Mesure de performance
 
 ## Module 4 (9/3): Modèle de Treynor Black (suite). Risque de modélisation. [@Boyle2012; @Ste1997]
 
@@ -149,6 +161,10 @@ Documents à lire avant le cours:
 
 - Articles cités
 - Chapitre 10 de Pfaff (2016)
+
+Documents:
+
+- slides-MVO.pdf
 
 TP 4:
 
@@ -162,6 +178,11 @@ Documents à lire avant le cours:
 
 - Chapitre 13.3 de Pfaff (2016)
 - Article de Litterman et He
+
+Documents:
+
+- slides-BL.pdf
+- Notes-BL.pdf
 
 TP 5:
 
@@ -178,6 +199,10 @@ Documents à lire avant le cours:
 
 - Article cités
 
+Documents:
+
+- slides-MF.pdf
+
 TP 6:
 
 - Construction de portefeuille à partir du modèle à trois facteurs de Fama-French.
@@ -192,6 +217,10 @@ Documents à lire avant le cours:
 
 - Chapitre 11 de Pfaff (2016)
 - Article de Bruder et Roncalli
+
+Documents:
+
+- slides-RB.pdf
 
 TP 7:
 
