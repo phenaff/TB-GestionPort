@@ -1,0 +1,137 @@
+---
+title: "SIM & Treynor-Black"
+author: "P. Hénaff"
+date: "3/2021"
+output:
+  beamer_presentation:
+    colortheme: dolphin
+    theme: Montpellier
+  slidy_presentation: default
+
+header-includes:
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{graphicx}
+  - \usepackage{subfig}
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{wrapfig}
+  - \usepackage{float}
+  - \usepackage{colortbl}
+  - \usepackage{pdflscape}
+  - \usepackage{tabu}
+  - \usepackage{threeparttable}
+  - \usepackage{threeparttablex}
+  - \usepackage[normalem]{ulem}
+  - \usepackage{makecell}
+  - \usepackage{xcolor}
+  - \usepackage{xfrac}
+
+  
+bibliography: ../../library.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+```
+
+```{r load-libraries, include=FALSE, echo=FALSE}
+library(quantmod)
+library(xts)
+library(hornpa)
+library(lubridate)
+library(xtable)
+library(PerformanceAnalytics)
+library(TTR)
+library(SuppDists)
+library(lubridate)
+library(roll)
+library(Hmisc)
+library(nFactors)
+library(quadprog)
+library(knitr)
+library(kableExtra)
+library(latex2exp)
+
+get.src.folder <- function() {
+  path.expand("../GP/src")
+}
+
+get.data.folder <- function() {
+  path.expand("../GP/data")
+}
+
+source(file.path(get.src.folder(), 'utils.R'))
+source(file.path(get.src.folder(), 'FileUtils.R'))
+```
+
+## Single Index Model (Sharpe)
+
+* Rendement
+  $$
+  R_i(t) = \alpha_i + \beta_i R_M(t) + e_i(t)
+  $$
+  
+* Variance du rendement
+  $$
+  \sigma_i^2 = \beta_i^2 \sigma_M^2 + \sigma(e_i)^2
+  $$
+  
+* Covariance des rendements
+  $$
+  \mbox{cov}(R_i, R_j) = \beta_i \beta_j \sigma_M^2
+  $$
+
+
+## Allocation Treynor-Black
+
+* Exploiter l'information donnée par $\alpha_i$ pour constituer un portefeuille "actif"
+* Allouer le reste de son budget au portefeuille tangent en maximisant le ratio de Sharpe
+
+## Portefeuille Actif
+
+$$
+\Sigma_A = \begin{bmatrix}
+\sigma^2(e_1) & & \\
+& \ddots & \\
+& & \sigma^2(e_n) \end{bmatrix}
+$$
+
+$$
+w_{Ai} = \frac{\sfrac{\alpha_i}{\sigma^2_i}}{\sum \sfrac{\alpha_i}{\sigma^2_i} }
+$$
+
+## Portefeuille Actif
+
+
+\begin{align*}
+R_A &= \alpha_A + \beta_A R_M \\
+\sigma^2_A &= \beta^2_A \sigma^2_M + \sigma^2(e_A)
+\end{align*}
+
+\begin{align*}
+\alpha_A &= \sum w_{Ai} \alpha_i \\
+\beta_A &= \sum w_{Ai} \beta_i \\
+\sigma^2(e_A) &= \sum w^2_{Ai} \sigma^2(e_i) \\
+w_{Ai} &= \frac{\sfrac{\alpha_i}{\sigma^2_i}}{\sum \sfrac{\alpha_i}{\sigma^2_i} }
+\end{align*}
+
+## Allocation entre le Portefeuille Actif et le Portefeuille Tangent
+
+$$
+w_A = \frac{\alpha_A \sigma^2_M}{\alpha_A \sigma^2_M(1-\beta_A) + R_M \sigma^2(e_A)}
+$$
+
+## Relation avec Ratio de Sharpe
+
+\begin{align*}
+\frac{\alpha^2_A}{\sigma^2(e_A)} &= \alpha^T \Sigma^{-1} \alpha \\
+&= \sum_i \frac{\alpha^2_i}{\sigma^2(e_i)}
+\label{eq:sep-2}
+\end{align*}
