@@ -71,8 +71,8 @@ Equivalent à:
 
 $$
 \begin{aligned}
-w^* & = \mbox{argmin}\ \   \frac{1}{2} w^T \Sigma w - \gamma x^T\mu \\
-& = \gamma \Sigma^{-1} \mu
+w^* & = \mbox{argmin}\ \   \frac{1}{2} w^T \Sigma w - \gamma x^T\mu^* \\
+& = \gamma \Sigma^{-1} \mu^*
 \end{aligned}
 $$
 
