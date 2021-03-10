@@ -102,8 +102,6 @@ Valorisation par Arbitrage
 + Il y a assez de titres sur le marché pour créer des portefeuilles où le risque spécifique a été diversifié
 + Absence d'arbitrage
 
-## Raisonnement par Arbitrage
-
 ## APT (1)
 ::: columns
 
@@ -150,6 +148,19 @@ abline(a=.0, b=.03, col="green")
 
 :::
 
+## APT(3) Exemple
+
+Portefeuille      E(R)       $\beta_1$         $\beta_2$
+------------      -------    ---------         ---------
+S&P500            7%          3.45               0.033
+NASDAQ            9%          4.74               0.098
+------------      -------    ---------         ---------
+------------      -------    ---------         ---------
+70% S&P + 
+30% NASDAQ        7.6%          3.837              0.0525
+Portefeuille
+d'arbitrage        8%          3.837              0.0525
+------------      -------    ---------         ---------
 
 ## APT (3)
 
@@ -224,13 +235,15 @@ knitr::include_graphics("FF-rolling-betas.png")
 knitr::include_graphics("morningstar-box.png")
 ```
 
-## Autres Facteurs: Momentum
+## Autres Facteurs: Momentum (Carhart)
 
 $$
 R_{i,t} = \alpha_i + \beta_{i,M} R_{M,t} + \beta_{i, SMB} SMB_t + \beta_{i, HML} HML_t + \beta_{i,UMD} R_{UMD,t} + \ldots + e_{i,t}
 $$
 
 UMD: Up Minus Down
+
+$n$ meilleurs rendements - $n$ plus bas rendements de la periode précédente. 
 
 ## Momentum et Liquidité (1)
 
@@ -256,22 +269,9 @@ $$
 
 Erreur Type I: Accepter un facteur alors qu'il n'est pas significatif.
 
-## Exercise: Significativité de $\alpha$
+## TP 6: Simulation numérique de la distribution de $\alpha$
 
-+ $\alpha$ mensuel = 0,20%
-+ $\beta$ = 1,2
-+ $\sigma$ résiduel mensuel = 2%
-+ $\sigma$ marché mensuel = 6%
-+ 36 mois de données.
-
-Est-ce que le gérant apporte une valeur ajoutée, ou bien est-il chanceux?
-
-## Exercice: Valider le résultat précédent par simulation
-
-+ Tirer un échantillon de $R(t)$ et $R_M(t)$ sous $H_0$
++ Tirer un échantillon de $R(t)$ et $R_M(t)$ sous $H_0: \alpha_i=0$
 + Estimer $\alpha$ par regression, en utilisant \texttt{apply}
-+ Calculer la distribution empirique du ratio 
-$$
-\frac{\hat{\alpha_i}}{\sigma(\hat{\alpha_i})} \sim  \mbox{t-stat}
-$$
++ Calculer la distribution empirique du ratio et en déduire un test de significativité. 
 
