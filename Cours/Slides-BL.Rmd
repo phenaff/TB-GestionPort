@@ -83,16 +83,6 @@ source(file.path(get.src.folder(), 'FileUtils.R'))
 knitr::include_graphics("capital-market-line.pdf")
 ```
 
-## MEDAF: Droite de Marché des Titres
-
-```{r, capm, echo=FALSE, fig.cap="Droite de Marché des Titres", fig.height=5}
-x <- runif(20, .5, 2)
-y <- .02 + .03*x + rnorm(20,0,.0025)
-plot(x,y, xlim=c(0, 2.5), ylim=c(0, .1), bty="no", pch=1, col="blue", xlab=expression(beta),
-     ylab=expression(E(r)))
-abline(a=.02, b=.03, col="red")
-```
-
 
 ## Black-Litterman (1)
 
@@ -127,7 +117,7 @@ $$
 U(w) = w^T \Pi - \frac{\delta}{2} w^T \Sigma w
 $$
 
-Solution "inversée" de $\Pi$ en fonction de $w%:
+Solution "inversée" de $\Pi$ en fonction de $w$:
 
 $$
 \Pi = \delta \Sigma w_{eq}
@@ -146,17 +136,49 @@ $$
 \epsilon^{(v)} \sim \mathcal{N}(0, \Omega)
 $$
 
-## Exemple 1: IBM et Dell surperforme MS de 6%
+## Résumé
 
-Rendement de (1/2 IBM - MSFT + 1/2 DELL) = 6%
+Deux équations pour $\mu$
+
+* Distribution ex-ante
+$$
+\mu = \Pi + \epsilon^{(e)}
+$$
+* Views
+$$
+P \mu = Q + \epsilon^{(v)}
+$$
+
+
+## Exemple
+
+\tiny
+```{r}
+summary(monthlyReturns)
+```
+\normalsize
+
+## Correlation
+
+\tiny
+```{r}
+c <- cor(monthlyReturns)
+kable(c, booktabs=T)
+```
+\normalsize
+
+## Exemple 1: IBM et Dell surperforme MS (sd = 5%)
+
+Rendement de (1/2 IBM - MSFT + 1/2 DELL) = 6% + terme d'erreur
 
 
 \tiny
 ```{r, echo=TRUE, message=FALSE}
+sd <- .02
 pickMatrix <- matrix(c(1/2, -1, 1/2, rep(0, 3)), 
                      nrow = 1, ncol = 6 )
 views <- BLViews(P = pickMatrix, q = 0.06,
-                 confidences =  100, 
+                 confidences =  1/sd, 
                  assetNames = colnames(monthlyReturns))
 views
 ```
@@ -174,14 +196,14 @@ marketPosterior
 ```
 \normalsize
 
-## Exemple 2: Le rendement moyen du secteur financier sera de 15%, avec un indice de confiance de 90%
+## Exemple 2: Le rendement moyen du secteur financier sera de 15% (sd = .04)
 
-Rendement de (C + JPM + BAC + MS)/4 = 15%
+Rendement de (C + JPM + BAC + MS)/4 = 15% + terme d'erreur
 \tiny
 ```{r, echo=TRUE}
 finViews <- matrix(ncol = 4, nrow = 1, dimnames = list(NULL, c("C","JPM","BAC","MS")))
 finViews[,1:4] <- rep(1/4,4)
-views <- addBLViews(finViews, 0.15, 90, views)
+views <- addBLViews(finViews, q=0.15, confidences=1/sd, views)
 views
 ```
 \normalsize
@@ -227,4 +249,12 @@ weightsPie(optPorts$posteriorOptimPortfolio)
 :::
 
 ::::
+
+## Exercise
+
+Ajouter les "vues" suivantes au modèle. Choisissez les sd qui vous semblent pertinentes.
+Résoudre avec la librairie BLCOP.
+
+* BAC va surperformer Citibank (C)
+* Dell aura un rendement de 0.5%
 
