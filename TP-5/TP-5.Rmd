@@ -44,5 +44,8 @@ library(broom)
 
 * Effectuer une lecture attentive de l'article de He et Litterman. 
 
-* A partir de la note de cours, reproduire les autres exemples de l'article, et comparer avec une allocation MV classique.
+* A partir de la note de cours, reproduire les autres exemples de l'article, 
+comparer les résultats avec ceux obtenus avec le package BLCOP.
+
+* Comparer avec une allocation MV classique.
 

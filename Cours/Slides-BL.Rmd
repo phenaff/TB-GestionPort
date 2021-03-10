@@ -101,9 +101,55 @@ portefeuille de marché, et investir dans ce portefeuille.
 + Exprimer des "vues" sur l'espérance de rendement de portefeuilles quelconques
 + Utiliser ces "vues"pour modifier les espérances de rendement et la structure de covariance des actifs.
 
-## Black-Litterman (2)
 
-View: IBM et Dell surperforme MS.
+## Information ex-ante
+
+Distribution des rendements:
+
+$$
+r \sim \mathcal{N}(\mu, \Sigma)
+$$
+
+L'espérance de rendement $\mu$ est aussi aléatoire
+$$
+\mu = \Pi + \epsilon^{(e)}
+$$
+avec
+$$
+\epsilon^{(e)} \sim \mathcal{N}(0, \tau \Sigma)
+$$
+
+## Optimisation inversée
+
+On utilise le portefeuille de marché pour inférer l'espérance de rendement:
+
+$$
+U(w) = w^T \Pi - \frac{\delta}{2} w^T \Sigma w
+$$
+
+Solution "inversée" de $\Pi$ en fonction de $w%:
+
+$$
+\Pi = \delta \Sigma w_{eq}
+$$
+
+## Expression de prédictions à propos des rendements
+
+Les prédictions sont exprimées par des portefeuilles dont on donne le rendement, avec une marge d'erreur.
+
+$$
+P \mu = Q + \epsilon^{(v)}
+$$
+
+avec 
+$$
+\epsilon^{(v)} \sim \mathcal{N}(0, \Omega)
+$$
+
+## Exemple 1: IBM et Dell surperforme MS de 6%
+
+Rendement de (1/2 IBM - MSFT + 1/2 DELL) = 6%
+
 
 \tiny
 ```{r, echo=TRUE, message=FALSE}
@@ -116,7 +162,7 @@ views
 ```
 \normalsize
 
-## Black-Litterman (3)
+## Traduction en distribution ex-post (voir note de cours)
 
 \tiny
 ```{r, echo=FALSE, message=FALSE}
@@ -128,10 +174,9 @@ marketPosterior
 ```
 \normalsize
 
-## Black-Litterman (4)
+## Exemple 2: Le rendement moyen du secteur financier sera de 15%, avec un indice de confiance de 90%
 
-View: Le rendement moyen du secteur financier sera de 15%
-
+Rendement de (C + JPM + BAC + MS)/4 = 15%
 \tiny
 ```{r, echo=TRUE}
 finViews <- matrix(ncol = 4, nrow = 1, dimnames = list(NULL, c("C","JPM","BAC","MS")))
@@ -141,7 +186,7 @@ views
 ```
 \normalsize
 
-## Black-Litterman (5)
+## Traduction en distribution ex-post (voir note de cours)
 
 \tiny
 ```{r, echo=TRUE}
@@ -153,7 +198,7 @@ marketPosterior
 ```
 \normalsize
 
-## Black-Litterman (6)
+## Optimisation MV classique
 
 Portefeuille Tangent:
 
