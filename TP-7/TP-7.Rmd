@@ -1,0 +1,161 @@
+---
+title: "Gestion de Portefeuille"
+subtitle: "TP-7: Simulation d'une gestion selon un Budget Risque"
+author: Patrick Hénaff
+date: "Février-Mars 2020"
+output: 
+  pdf_document:
+    keep_tex: true
+    fig_caption: yes
+    latex_engine: pdflatex
+geometry: margin=1in
+header-includes:
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{float}
+bibliography: ../../library.bib
+csl: ../../apa.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+```
+
+```{r load-libraries, include=FALSE, echo=FALSE}
+library(quantmod)
+library(xts)
+library(hornpa)
+library(lubridate)
+library(xtable)
+library(PerformanceAnalytics)
+library(TTR)
+library(SuppDists)
+library(lubridate)
+library(roll)
+library(Hmisc)
+library(nFactors)
+library(quadprog)
+library(knitr)
+library(kableExtra)
+library(latex2exp)
+library(FFdownload)
+library(fPortfolio)
+library(BLCOP)
+library(mnormt)
+library(portfolioBacktest)
+library(riskParityPortfolio)
+
+get.src.folder <- function() {
+  path.expand("../GP/src")
+}
+
+get.data.folder <- function() {
+  path.expand("../GP/data")
+}
+
+source(file.path(get.src.folder(), 'utils.R'))
+source(file.path(get.src.folder(), 'FileUtils.R'))
+```
+
+L'objet de ce TP est de se familiariser avec les packages de "backtesting" disponibles dans R. pour cela, on propose de reproduire une analyse réalisée avec le package "riskParityPortfolio", mais en utilisant un nouveau jeu de données, et en portant quelques modifications à l'exemple proposé.
+
+
+# Question 1: Calcul du portefeuille tangent.
+
+On rappelle que la frontière efficiente en présence d'un taux sans risque est la solution du problème:
+
+$$
+\begin{aligned}
+    & \mbox{min}_w \ \   w^T \Sigma w \\
+    \mbox{s.t.} & \\
+    & \left(1- w^T \mathbf{1} \right) r_f + w^T \mu = \mu^* \\
+\end{aligned}
+$$
+
+et que le portefeuille tangent est la solution de ce programme, avec des poids normalisés. De façon équivalente, le portefeuille tangent est la solution du programme qui maximise le ratio de Sharpe:
+
+$$
+\begin{aligned}
+    & \mbox{max}_w \ \   \frac{\mu^T w - r_f}{\sqrt{w^T \Sigma w}} \\
+    \mbox{s.t.} & \\
+    & \mathbf{1}^T w = 1 \\
+    & w >= 0
+    \end{aligned}
+$$
+
+L'algorithme proposé dans la vignette résoud par contre:
+
+$$
+\begin{aligned}
+    & \mbox{min}_w \ \   w^T \Sigma w \\
+    \mbox{s.t.} & \\
+    & w^T \mu = 1 \\
+    & w >= 0
+\end{aligned}
+$$
+Le portefeuille tangent étant obtenu en normalisant la solution.
+
++ L'algorithme "Portefeuille Tangent", tel qu'il est programmé dans la vignette est-il correct? Sinon, indiquez la modification à apporter.
++ Modifiez le programme pour prendre en compte des contraintes linéaires sur les poids, dans le calcul du portefeuille tangent:
+$$
+A^T w \leq b
+$$
++ selon les conditions de marché, le portefeuille tangent n'est pas toujours défini. Veillez à bien prendre en compte ces conditions dans votre mise en oeuvre du programme.
+
+# Question 2: Comparaison de diverses stratégies d'allocation, sans contraintes
+
+Pour les simulations historiques, on utilise les données hebdomadaires suivantes:
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE}
+daily.price.file <- "./daily.price.rda"
+load(daily.price.file)
+weekly.price <- daily.price[endpoints(daily.price, on="weeks", k=1),]
+tickers <- names(weekly.price)
+```
+
+
+```{r, eval=TRUE, echo=TRUE, warning=FALSE}
+kable(table.Stats(weekly.price), "latex", booktabs=T, caption="Univers des titres") %>% 
+  kable_styling(latex_options=c("scale_down", "HOLD_position"))
+```
+
+Le taux sans risque annualisé est fourni à une périodicité mensuelle:
+
+```{r, echo=TRUE}
+tmp <- read.csv("FEDFUNDS.csv", header=TRUE, sep=",")
+rf_rate <- xts(tmp$FEDFUNDS/100.0, date(tmp$DATE))
+colnames(rf_rate) <- "Rf"
+
+# fonction pour interpoler la valeur correspondant à une date
+get.rf <- function(dt) {
+ approx(x=index(rf_rate), y=rf_rate, xout=dt, rule=2)$y
+}
+```
+
+```{r, echo=FALSE}
+plot(rf_rate, main="Taux sans risque")
+```
+
+En suivant l'exemple donné dans la vignette "Risk Parity Portfolio", effectuer une simulation des stratégies suivantes, et commentez les résultats.
+
++ $1/N$
++ Portefeuille tangent
++ Portefeuille "risk parity"
+
+
+# Question 3: Comparaison de diverses stratégies d'allocation, avec contraintes de diversification
+
+Ajoutez les contraintes suivantes aux portefeuilles "risk parity" et "tangent", et exécutez les simulations de gestion. Comparez ces résultats aux simulations de la question 2.
+
+$$
+\begin{aligned}
+w_i & \leq 25\% \\
+w_{AAPL} + w_{MSFT} + w_{AMZN} & \leq 40\%
+\end{aligned}
+$$
+
+
