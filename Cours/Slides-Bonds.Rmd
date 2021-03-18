@@ -1,0 +1,161 @@
+---
+title: "Portefeuilles Obligataires"
+author: "P. Hénaff"
+date: "3/2021"
+output:
+  beamer_presentation:
+    colortheme: dolphin
+    theme: Montpellier
+  slidy_presentation: default
+
+header-includes:
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{graphicx}
+  - \usepackage{subfig}
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{multirow}
+  - \usepackage{wrapfig}
+  - \usepackage{float}
+  - \usepackage{colortbl}
+  - \usepackage{pdflscape}
+  - \usepackage{tabu}
+  - \usepackage{threeparttable}
+  - \usepackage{threeparttablex}
+  - \usepackage[normalem]{ulem}
+  - \usepackage{makecell}
+  - \usepackage{xcolor}
+
+  
+bibliography: ../../library.bib
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+```
+
+```{r load-libraries, include=FALSE, echo=FALSE}
+library(lubridate)
+library(knitr)
+library(kableExtra)
+library(latex2exp)
+
+get.src.folder <- function() {
+   path.expand("../GP/src")
+ }
+ 
+ get.data.folder <- function() {
+   path.expand("../GP/data")
+ }
+
+ source(file.path(get.src.folder(), 'utils.R'))
+ source(file.path(get.src.folder(), 'FileUtils.R'))
+```
+
+## Calcul Prix/Rendement
+
+Prix "coupon inclus"
+$$
+PV = \frac{1}{(1+r)^{\frac{t_1 - t_0}{D}}} \left( Nc + \frac{Nc}{(1+r)} + \ldots + \frac{N(1+c)}{(1+r)^N}\right)
+$$
+
+Coupon courru:
+
+$$
+\mathsf{CC} = Nc \ \ \frac{t_0 - t_{-1}}{D}
+$$
+Prix "pied de coupon" 
+
+$$
+P = PV - CC
+$$
+
+## Exemple: Veolia 4,625% 3/2017 (FR0011224963)
+
+www.boerse-frankfurt.de/bond
+
++ Date de calcul: 17/3/2021
++ Date de règlement/livraison: 18/3/2021
++ Date de maturité: 30/3/2027
++ Coupon: 4.625
++ Convention ACT/365
++ Prix (bid): 126.85
++ CC: 4.46
++ Rendement (bid): 0.1507 %
+
+Vérifier avec la librairie BondValuation.
+
+## Risque de taux
+
+PV01 "present value of 1 basis point"
+
+$$
+\mathcal{PV}01 = -\frac{\partial P}{\partial r} \times 0.0001
+$$
+
+## Objectif de gestion 
+
++ $L(t_i), i=1, \ldots n$ cashflow au passif 
++ Construire un portefeuille obligataire à même de financer les flux $L(t_i)$, quelque soit l'évolution future des taux.
+
+Deux grandes catégories de méthodes:
+
+* Adossement flux-à-flux
+* Immunisation
+
+... les deux peuvent être combinées.
+
+## Adossement Flux à Flux
+
+$q_i$
+:   quantité de titre $i$, achetée en $t=0$
+
+$C(t)$
+:   liquidités en $t$
+
+$F_i(t)$
+:   cash flow du titre $i$ en $t$.
+
+$P_i$
+:   prix du titre $i$
+
+Equilibre des flux:
+
+$$C(t) = (1+r) C(t-1) + \sum_i q_i F_i(t) - L(t)$$
+
+## Optimisation du cout
+
+\begin{align}
+    \mbox{min} & \sum_i q_i P_i \label{eq:objective} \\
+    \mbox{s.t.} & \nonumber \\
+    & (1+r) C(t-1) + \sum_i q_i F_i(t) -C(t) = L(t) \label{eq:cf} \\
+    & q_i >= 0, i=1, \ldots, n \nonumber \\
+    & C(t) >= 0, t=1, \ldots, 5 \nonumber
+  \end{align}
+
+
+## Imunisation
+
+Soit deux titres A et B et un passif de valeur $P_L$ et de risque $PV01_L$:
+
+$$\begin{aligned}
+V_L & = & q_A P_A + q_B P_B \\
+PV01_L & = & q_A PV01_A + q_B PV01_B
+\end{aligned}$$
+
+## Maximisation du rendement avec $N$ titres
+
+\begin{align}
+    \mbox{min} & \sum_i q_i r_i \mathcal{PV}01_i \\
+    \mbox{s.t.} & \nonumber \\
+    & \sum_i q_i \mathcal{PV}01_i = \mathcal{PV}01_L \\
+    & \sum_i q_i P_i = P_L \\
+    & q_i >= 0, i=1, \ldots, n \nonumber \\
+      \end{align}
+
