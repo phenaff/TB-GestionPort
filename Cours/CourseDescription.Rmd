@@ -203,9 +203,7 @@ Documents:
 
 - slides-MF.pdf
 
-TP 6:
-
-- Construction de portefeuille à partir du modèle à trois facteurs de Fama-French.
+Pas de TP.
 
 ## Module 7 (23/3): Méthodes récentes de gestion de portefeuille, "risk budgeting" [@Bruder2012]
 
