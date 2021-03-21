@@ -41,7 +41,7 @@ library(quadprog)
 
 Bayesian approach:
 
-* The expected returns ar random variables
+* The expected returns are random variables
 * CAPM equilibrium distribution as prior
 * additional probabilistic views combined with prior to get posterior distribution of expected return.
 
@@ -62,7 +62,7 @@ $$
 \Pi = \delta \Sigma w_{eq}
 $$
 
-The expected return $\mu$ is also a random variable. The bayesian prior is that
+The expected return $\mu$ is also a random variable. The bayesian prior is such that
 $$
 \mu = \Pi + \epsilon^{(e)}
 $$
@@ -81,6 +81,7 @@ with
 $$
 \epsilon^{(v)} \sim \mathcal{N}(0, \Omega)
 $$
+
 # Posterior distribution
 
 ## GLS linear model
@@ -95,7 +96,7 @@ $$
 \hat{\beta} = (X^T \Omega^{-1}X)^{-1} X^T \Omega^{-1} Y
 $$
 
-## Theil estimatiom method for posterior distribution
+## Theil's estimatiom method for posterior distribution
 
 Prior distribution for return
 $$
@@ -183,17 +184,15 @@ See paper by He and Litterman for various manipulations of this last equation.
 Code freely adapted from https://github.com/systematicinvestor/SIT, but using the notation of the paper.
 
 ```{r, echo=FALSE}
-spl <- function 
-(
+spl <- function (
   s,      # input string
   delim = ',' # delimiter
-)
-{ 
+) { 
   unlist(strsplit(s,delim))
 }
 ```
 
-Market data from He & Litterman paper
+Market data from He & Litterman: 
 ```{r, echo=T}
  data =
 '1,0.4880,0.4780,0.5150,0.4390,0.5120,0.4910
@@ -230,7 +229,7 @@ colnames(Table2) = c('Assets','Std Dev','Weq','PI')
 kable(Table2, format='latex', booktabs=T)
 ```
 
-## View1 is The German Equity Market Will Outperform the rest of European Markets by 5% a year.
+## View 1: is The German equity market will outperform the rest of European Markets by 5% a year.
 
 ```{r, echo=TRUE}
 P = matrix(c(0, 0, -29.5, 100, 0, -70.5, 0)/100, nrow=1)
@@ -247,8 +246,10 @@ w.star = (1/delta) * solve(Sigma.bar) %*% mu.bar
 
 df = data.frame(100*cbind(t(P), mu.bar, w.star, w.star-w.eq/(1+tau)))
 row.names(df) = AssetNames
-colnames(df) =  c('P', "mu.bar", 'W','W - Weq/1+tau')
-kable(df, digits = 1, format="latex", booktabs=T)
+names(df) =  c('P', "$\\bar{\\mu}$", '$w^*$','$w^* - \\frac{W_{eq}}{1+\\tau}$')
+kable(df, digits = 1, format="latex", booktabs=T, escape=F,
+      caption="Solution with View 1. P: view matrix, $\\bar{\\mu}$: ex-post expected return,
+      $w^*$: optimal weights, $\\frac{W_{eq}}{1+\\tau}$: scaled equilibrium weights")
 ```
 
 
