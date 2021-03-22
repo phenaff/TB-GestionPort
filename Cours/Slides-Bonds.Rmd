@@ -60,12 +60,12 @@ get.src.folder <- function() {
 
 ## Calcul Prix/Rendement
 
-Prix "coupon inclus"
+Prix "coupon couru inclus"
 $$
 PV = \frac{1}{(1+r)^{\frac{t_1 - t_0}{D}}} \left( Nc + \frac{Nc}{(1+r)} + \ldots + \frac{N(1+c)}{(1+r)^N}\right)
 $$
 
-Coupon courru:
+Coupon couru:
 
 $$
 \mathsf{CC} = Nc \ \ \frac{t_0 - t_{-1}}{D}
@@ -129,10 +129,11 @@ Equilibre des flux:
 
 $$C(t) = (1+r) C(t-1) + \sum_i q_i F_i(t) - L(t)$$
 
-## Optimisation du cout
+## Optimisation du cout ou du rendement moyen
 
 \begin{align}
-    \mbox{min} & \sum_i q_i P_i \label{eq:objective} \\
+    \mbox{min} & \sum_i q_i P_i  \\
+    \mbox{max} & \sum_i q_i r_i \mbox{PV01}_i \\
     \mbox{s.t.} & \nonumber \\
     & (1+r) C(t-1) + \sum_i q_i F_i(t) -C(t) = L(t) \label{eq:cf} \\
     & q_i >= 0, i=1, \ldots, n \nonumber \\

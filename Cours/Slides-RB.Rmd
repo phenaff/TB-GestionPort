@@ -83,7 +83,7 @@ source(file.path(get.src.folder(), 'FileUtils.R'))
 + Croissance: $X>Y \Rightarrow \mathcal{R}(X) \geq \mathcal{R}(Y)$
 + Invariance: $\mathcal{R}(X+k) = \mathcal{R}(X)$
 + Homogénéité: $\lambda \in R_+ \Rightarrow \mathcal{R}(\lambda X) = \lambda \mathcal{R}(X)$
-+ Convexité: $\lambda \in [0,1] \Rightarrow \mathcal{R}(\lambda X + (1-\lambda)Y) \leq \lambda\mathcal{R}( X + (1-\lambda) \mathcal{R}(Y)$
++ Convexité: $\lambda \in [0,1] \Rightarrow \mathcal{R}(\lambda X + (1-\lambda)Y) \leq \lambda\mathcal{R}(X) + (1-\lambda) \mathcal{R}(Y)$
 
 ## Théorème de décomposition d'Euler
 
@@ -186,7 +186,6 @@ Si la mesure de risque est $\sigma_p(w)$, alors
 \begin{aligned}
 \mathsf{CMR}_i &= \frac{\partial \sigma_p(w)}{\partial w_i} \\
 &= \frac{(\Sigma w)_i}{\sigma_p(w)} \\
-&= \frac{\mathrm{Cov}(R_i, R_p(w))}{\sigma_p(w)} \\
 &= \frac{\mathrm{Cov}(R_i, R_p(w))}{\sigma_p(w)} \\
 &= \frac{\mathrm{Cov}(R_i, R_p(w))}{\sigma^2_p(w)} \sigma_p(w) \\
 &= \beta_i \sigma_p(w)
@@ -323,6 +322,6 @@ $$
   \end{aligned}
 $$
 
-+ Formuler la fonction objectif
-+ Résoudre le problème avec le package NlcOptim
++ Formuler la fonction objectif $f(w)$
++ Résoudre le problème avec le paquet NlcOptim
 
