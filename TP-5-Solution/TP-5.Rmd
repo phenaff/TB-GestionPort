@@ -1,0 +1,285 @@
+---
+title: "Gestion de Portefeuille"
+subtitle: "TP-5; Modèle de Black-Litterman"
+author: Patrick Hénaff
+date: "Février-Mars 2021"
+output: 
+  pdf_document:
+    keep_tex: true
+    fig_caption: yes
+    latex_engine: pdflatex
+    extra_dependencies: ["float"]
+geometry: margin=1in
+
+header-includes:
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
+
+bibliography: ../../library.bib
+csl: ../../apa.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.pos = "h", out.extra = "")
+options(knitr.kable.NA = '')
+```
+
+```{r load-libraries, include=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+library(xts)
+library(hornpa)
+library(lubridate)
+library(xtable)
+library(quantmod)
+library(PerformanceAnalytics)
+library(TTR)
+library(lubridate)
+library(roll)
+library(Hmisc)
+library(nFactors)
+library(kableExtra)
+library(broom)
+library(BLCOP)
+library(fPortfolio)
+library(quadprog)
+```
+
+* Effectuer une lecture attentive de l'article de He et Litterman. 
+
+* A partir de la note de cours, reproduire les autres exemples de l'article, 
+comparer les résultats avec ceux obtenus avec le package BLCOP.
+
+* Comparer avec une allocation MV classique.
+
+# Données
+
+```{r, echo=FALSE}
+spl <- function (
+  s,      # input string
+  delim = ',' # delimiter
+) { 
+  unlist(strsplit(s,delim))
+}
+```
+
+```{r, echo=T}
+ data =
+'1,0.4880,0.4780,0.5150,0.4390,0.5120,0.4910
+ 0.4880,1,0.6640,0.6550,0.3100,0.6080,0.7790
+ 0.4780,0.6640,1,0.8610,0.3550,0.7830,0.6680
+ 0.5150,0.6550,0.8610,1,0.3540,0.7770,0.6530
+ 0.4390,0.3100,0.3550,0.3540,1,0.4050,0.3060
+ 0.5120,0.6080,0.7830,0.7770,0.4050,1,0.6520
+ 0.4910,0.7790,0.6680,0.6530,0.3060,0.6520,1'
+  
+  Corrmat = matrix( as.double(spl( gsub('\n', ',', data), ',')), 
+                    nrow = length(spl(data, '\n')), byrow=TRUE)
+  
+  stdevs = c(16.0, 20.3, 24.8, 27.1, 21.0,  20.0, 18.7)/100
+  w.eq = c(1.6, 2.2, 5.2, 5.5, 11.6, 12.4, 61.5)/100
+  # Prior covariance of returns
+  Sigma = Corrmat * (stdevs %*% t(stdevs))
+```
+
+Calcul des rendements d'équilibre:
+
+```{r, echo=T}
+# risk aversion parameter
+delta = 2.5
+Pi = delta * Sigma %*% w.eq
+```
+
+```{r}
+AssetNames = c('Australia','Canada','France','Germany','Japan','UK','USA')
+Table2 = cbind(AssetNames, round(cbind(stdevs, w.eq, Pi) * 100,1))
+colnames(Table2) = c('Assets','$\\sigma$','$w_{eq}$','$\\Pi$')
+kable(Table2, format='latex', booktabs=T, escape=F,
+      caption="Résumé des données de marché")
+```
+
+# Fonction de calcul des poids optimaux
+
+
+```{r, echo=T}
+bl.weights <- function(P, Q, tau.s, tau.o) {
+# one tau per view
+x = tau.o * diag(P %*% Sigma %*% t(P))
+Omega = diag(x, nrow=length(x))
+tau.Sigma.inv = solve(tau.s*Sigma)
+M.inverse = solve(tau.Sigma.inv + (t(P) %*% solve(Omega) %*% P))
+mu.bar = M.inverse %*% (tau.Sigma.inv %*% Pi + t(P) %*% solve(Omega) %*% Q)
+Sigma.bar = M.inverse + Sigma
+
+w.star = (1/delta) * solve(Sigma.bar) %*% mu.bar
+
+A = (1/tau.s)*Omega + 1/(1+tau.s) * P %*% Sigma %*% t(P)
+APS <- 1/(1+tau.s) * solve(A) %*% P %*% Sigma 
+OIQ <- (tau.s/delta) * solve(Omega) %*% Q
+Lambda =  OIQ - APS %*% w.eq - APS %*% t(P) %*% OIQ  
+
+Hmisc::llist(mu.bar, w.star, Lambda)
+}
+```
+
+# Point de vue 1: Le marché action Allemand surperforme le reste du marché action Européen de 5% par an.
+
+Portefeuille exprimant le point de vue:
+
+```{r, echo=TRUE}
+P.1 = matrix(c(0, 0, -29.5, 100, 0, -70.5, 0)/100, nrow=1)
+Q.1 = 5/100
+tau.s = 0.05
+tau.o = 0.05
+
+res <- bl.weights(P.1, Q.1, tau.s, tau.o)
+df = data.frame(100*cbind(t(P.1), res$mu.bar, res$w.star, res$w.star-w.eq/(1+tau.s)))
+df <- rbind(df, c(100*Q.1, rep(NA, 4)))
+df <- rbind(df, c(100*res$Lambda[1], rep(NA, 4)))
+
+row.names(df) = c(AssetNames, 'q', '$\\lambda \\times 100$')
+names(df) =  c('P', "$\\bar{\\mu}$", '$w^*$','$w^* - \\frac{W_{eq}}{1+\\tau}$')
+
+tmp <- kable(df, digits = 1, format="latex", booktabs=T, escape=F,
+      caption="Solution avec PdV 1. P: matrice du PdV, $\\bar{\\mu}$: rendement ex-post,
+      $w^*$: poids optimaux, $\\frac{W_{eq}}{1+\\tau}$: poids ex-ante") %>%
+  kable_styling(latex_options="HOLD_position")
+kableExtra::row_spec(tmp, 7, hline_after = TRUE)
+```
+
+# Point de vue 2: le marché action Canadien surperforme le marché US de 3% par an.
+
+## Solution Litterman & He
+
+Portefeuille exprimant le point de vue:
+
+```{r, echo=TRUE}
+P.2 = matrix(c(0, 100, 0, 0, 0, 0, -100)/100, nrow=1)
+Q.2 = 3/100
+
+P <- rbind(P.1, P.2)
+Q <- matrix(c(Q.1, Q.2), nrow=2)
+tau.o <- rep(0.05,2)
+res <- bl.weights(P, Q, tau.s, tau.o)
+df = data.frame(100*cbind(t(P), res$mu.bar, res$w.star, res$w.star-w.eq/(1+tau.s)))
+df <- rbind(df, c(100*t(Q), rep(NA, 4)))
+df <- rbind(df, c(t(100*res$Lambda), rep(NA, 4)))
+
+row.names(df) = c(AssetNames, 'q', '$\\lambda \\times 100$')
+names(df) =  c('$P_1$', '$P_2$', "$\\bar{\\mu}$", '$w^*$','$w^* - \\frac{W_{eq}}{1+\\tau}$')
+tmp <- kable(df, digits = 1, format="latex", booktabs=T, escape=F,
+      caption="Solution avec PdV 1 and 2.") %>%
+  kable_styling(latex_options="HOLD_position")
+kableExtra::row_spec(tmp, 7, hline_after = TRUE)
+```
+
+## Solution BLCOP
+
+La solution obtenue en resolvant directement le portefeuille tangent avec les rendements et la matrice de covariance ex-post est globalement en accord avec le résultat de Litterman & He.
+
+```{r}
+# rendement ex-ante 
+delta = 2.5
+Pi = delta * Sigma %*% w.eq
+
+# Point de vue
+tau.pdv = 0.05
+
+PDV.1 = matrix(c(0, 0, -29.5, 100, 0, -70.5, 0)/100, nrow=1)
+colnames(PDV.1) <- AssetNames
+# niveau de confiance
+sd <- as.numeric(tau.pdv * PDV.1  %*% Sigma %*% t(PDV.1))
+views <- BLViews(P = PDV.1, q = 0.05,
+                 confidences =  1/sd, 
+                 assetNames = AssetNames)
+
+PDV.2 = matrix(c(0, 100, 0, 0, 0, 0, -100)/100, nrow=1)
+colnames(PDV.2) <- AssetNames
+# niveau de confiance
+sd <- as.numeric(tau.pdv * PDV.2  %*% Sigma %*% t(PDV.2))
+views <- addBLViews(PDV.2, q = 0.03,
+                 confidences =  1/sd, 
+                 views)
+
+dist.expost <- posteriorEst(views=views, sigma=Sigma, mu=as.vector(Pi), tau=0.05)
+
+mu <- dist.expost@posteriorMean
+S <- dist.expost@posteriorCovar
+res <- solve.QP(Dmat=S, dvec=rep(0, length(mu)), Amat=as.matrix(mu, ncol=1), bvec=1, meq=1)
+w.QP <- round(100*res$solution/sum(res$solution),1)
+df <- data.frame(w=w.QP)
+row.names(df) <- AssetNames
+names(df) <- "$w^*$"
+kable(df, caption = "Portefeuille tangent avec BLCOP et solve.QP, incorporant les PDV 1 et 2",
+      format="latex", booktabs=T, escape=F) %>%
+    kable_styling(latex_options="HOLD_position")
+```
+
+
+# Point de vue 3: Optimiste sur le marché action Canadien
+
+Le seul changement est le paramètre $q_2$:
+
+```{r, echo=TRUE}
+Q.2 = 4/100
+
+Q <- matrix(c(Q.1, Q.2), nrow=2)
+
+res <- bl.weights(P, Q, tau.s, tau.o)
+df = data.frame(100*cbind(t(P), res$mu.bar, res$w.star, res$w.star-w.eq/(1+tau.s)))
+df <- rbind(df, c(100*t(Q), rep(NA, 4)))
+df <- rbind(df, c(t(100*res$Lambda), rep(NA, 4)))
+
+row.names(df) = c(AssetNames, 'q', '$\\lambda \\times 100$')
+names(df) =  c('$P_1$', '$P_2$', "$\\bar{\\mu}$", '$w^*$','$w^* - \\frac{W_{eq}}{1+\\tau}$')
+tmp <- kable(df, digits = 1, format="latex", booktabs=T, escape=F,
+      caption="Actions Allemandes surperforment de 4\\%") %>%
+  kable_styling(latex_options="HOLD_position")
+kableExtra::row_spec(tmp, 7, hline_after = TRUE)
+```
+
+# Point de vue 4: Moindre confiance dans le PdV "Allemagne vs reste de l'Europe"
+
+L'écart type du rendement du portefeuille 1 double ($\tau = 0.1$):
+
+```{r, echo=TRUE}
+tau.o <- c(0.1, .05)
+res <- bl.weights(P, Q, tau.s, tau.o)
+df = data.frame(100*cbind(t(P), res$mu.bar, res$w.star, res$w.star-w.eq/(1+tau.s)))
+df <- rbind(df, c(100*t(Q), rep(NA, 4)))
+df <- rbind(df, c(t(100*res$Lambda), rep(NA, 4)))
+
+row.names(df) = c(AssetNames, 'q', '$\\lambda \\times 100$')
+names(df) =  c('$P_1$', '$P_2$', "$\\bar{\\mu}$", '$w^*$','$w^* - \\frac{W_{eq}}{1+\\tau}$')
+tmp <- kable(df, digits = 1, format="latex", booktabs=T, escape=F,
+      caption="Moindre confiance dans le PdV 1.") %>%
+  kable_styling(latex_options="HOLD_position")
+kableExtra::row_spec(tmp, 7, hline_after = TRUE)
+```
+
+# Ajout d'un point de vue redondant.
+
+Le point de vue "Le marché action Canadien surperforme le marché Nippon de 4.12%" est implicite aux points de vue précédents. L'ajout du PdV ne change pas l'allocation.
+
+```{r, echo=TRUE}
+P.3 = matrix(c(0, 100, 0, 0, -100, 0, 0 )/100, nrow=1)
+Q.3 = 4.12/100
+
+P <- rbind(P.1, P.2, P.3)
+Q <- matrix(c(Q.1, Q.2, Q.3), nrow=3)
+tau.o <- c(0.1, .05, 0.05)
+res <- bl.weights(P, Q, tau.s, tau.o)
+df = data.frame(100*cbind(t(P), res$mu.bar, res$w.star, res$w.star-w.eq/(1+tau.s)))
+df <- rbind(df, c(100*t(Q), rep(NA, 4)))
+df <- rbind(df, c(t(100*res$Lambda), rep(NA, 4)))
+
+row.names(df) = c(AssetNames, 'q', '$\\lambda \\times 100$')
+names(df) =  c('$P_1$', '$P_2$', '$P_3$', "$\\bar{\\mu}$", '$w^*$','$w^* - \\frac{W_{eq}}{1+\\tau}$')
+tmp <- kable(df, digits = 1, format="latex", booktabs=T, escape=F,
+      caption="PdV redondant Canada/Japon.") %>%
+  kable_styling(latex_options="HOLD_position")
+kableExtra::row_spec(tmp, 7, hline_after = TRUE)
+```
+
+
+
