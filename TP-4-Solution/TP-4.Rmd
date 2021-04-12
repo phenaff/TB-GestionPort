@@ -1,0 +1,177 @@
+---
+title: "Gestion de Portefeuille"
+subtitle: "TP-4: Impact de la matrice de covariance dans le modèle MV"
+author: Patrick Hénaff
+date: "Février-Mars 2021"
+output: 
+  pdf_document:
+    keep_tex: true
+    fig_caption: yes
+    latex_engine: pdflatex
+    extra_dependencies: ["float"]
+geometry: margin=1in
+
+header-includes:
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{float}
+  - \floatplacement{figure}{H}
+
+bibliography: ../../library.bib
+csl: ../../apa.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.pos = "h", out.extra = "")
+```
+
+```{r load-libraries, include=TRUE, echo=TRUE, message=FALSE, warning=FALSE}
+library(xts)
+library(hornpa)
+library(lubridate)
+library(xtable)
+library(quantmod)
+library(PerformanceAnalytics)
+library(TTR)
+library(lubridate)
+library(roll)
+library(Hmisc)
+library(nFactors)
+library(kableExtra)
+library(broom)
+
+get.src.folder <- function() {
+  path.expand("../GP/src")
+}
+
+get.data.folder <- function() {
+  path.expand("../GP/data")
+}
+
+source(file.path(get.src.folder(), 'utils.R'))
+source(file.path(get.src.folder(), 'FileUtils.R'))
+```
+
+# Données
+
+On utilise la base de données "MultiAsset" du paquet FRAPO:
+
+```{r, echo=T, message=FALSE, warning=FALSE}
+library(FRAPO)
+data(MultiAsset)
+R <- returnseries(MultiAsset, percentage=F, trim=T)
+```
+
+Quelques statistiques descriptives sont résumées ci-dessous:
+
+```{r ret-moments, echo=FALSE}
+statNames <- c("mean", "std dev", "skewness", "kurtosis")
+symbols <- colnames(R)
+mo <- matrix(NA, nrow=length(symbols), ncol=length(statNames))
+n <- 1
+for(s in symbols) {
+  ts <- R[, s]
+  mo[n,] <- c(mean(ts), sd(ts), skewness(ts), kurtosis(ts))
+  n <- n+1
+}
+
+colnames(mo) <- statNames
+rownames(mo) <- symbols
+```
+
+```{r show-stats, echo=FALSE}
+kbl(mo, "latex", caption="Résumé des données de marché", booktabs=T) %>%
+  kable_styling(latex_options=c("stripped", "HOLD_position"))
+```
+\ 
+
+## Etude de la matrice de covariance
+
+On se propose d'étudier la matrice de covariance à l'aide de la formule de Stevens pour la matrice d'information $\mathcal{I} = \Sigma^{-1}$.
+
+- Pour chaque actif, estimer le modèle 
+
+$$
+R_{i,t} = \beta_0 + \beta_i^T R_t^{(-i)} + \epsilon_{i,t}
+$$
+avec $R_t^{(-i)}$ vecteur de rendement de tous les actifs sauf l'actif $i$, $\epsilon_{i,t} \sim \mathcal{N}(0, s_i^2)$
+
+- Trier les modèles par $R_i^2$ décroissant. En déduire les actifs qui sont suceptibles de recevoir un poid important dans le portefeuille optimal MV
+
+- Calculer les poids optimaux du modèle MV, et comparer avec les résultats des régressions.
+
+Calculons les poids à partir de la formule de Stevens, et comparons avec les résultats d'une optimisation MV:
+
+```{r, echo=T}
+idx <- seq(ncol(R))
+
+hedge.w <- matrix(NA, nrow=length(idx), ncol=length(idx))
+resid <- vector("numeric", length(idx))
+R2 <- vector("numeric", length(idx))
+mu <- colMeans(R)
+hedge.mu <- vector("numeric", length(idx))
+
+for(i in idx) {
+  idx2 <- idx[-i]
+  res = summary(lm(as.formula(paste(names(R)[i], "~ . ")), data=R))
+  hedge.w[i, idx2] = res$coefficients[,"Estimate"][-1]
+  hedge.mu[i] <- sum(res$coefficients[,"Estimate"][-1] * mu[idx2])
+  resid[i] <- res$sigma
+  R2[i] <- res$r.squared
+}
+
+w.star <- (mu - hedge.mu)/resid**2
+w.star <- w.star / (sum(w.star+abs(w.star))/2)
+
+# optimisation MV 
+
+mu <- colMeans(R)
+Sigma <- cov(R)
+w <- solve(Sigma, mu)
+w <- w / (sum(w+abs(w)) / 2)
+```
+
+Le tableau ci-dessous résume les calculs. On constate en premier lieu que le poids calculé par la formule de Stevens ($w^*$) coincide comme attendu avec le résultat de l'optimisation. 
+On constate ensuite qu'il existe des actifs presque redondants: on peut répliquer RUA à l'aide d'un portefeuille composé des autres actifs, avec un ecart-type résiduel de 0.3\%. Pour RUA et GSPC, une différence de rendement entre le titre et le portefeuille de couverture de 0.01\% motive un poids de l'ordre de 30\% dans le portefeuille optimal. Ceci illustre l'extrême sensibilité du portefeuille optimal aux estimations de rendement et de covariance.
+
+
+```{r, echo=FALSE}
+# sort by decreasing R2
+tmp <- sort(R2, decreasing=T, index.return=T)
+R2 <- tmp$x
+resid <- resid[tmp$ix]
+mu <- mu[tmp$ix]
+hedge.mu <- hedge.mu[tmp$ix]
+w.star <- w.star[tmp$ix]
+w <- w[tmp$ix]
+
+pm <- as(tmp$ix, "pMatrix")
+hedge.sorted <- t(pm) %*% hedge.w %*% pm
+hedge.res <- rbind(hedge.sorted, resid, R2, mu, hedge.mu, w.star, w)
+
+rownames(hedge.res) <- c(names(R)[tmp$ix], "$s_i$", "$R^2_i$", "$\\mu$", "$\\beta^T \\mu^{(-i)}$", "$w^*$", "w" )
+colnames(hedge.res) <- names(R)[tmp$ix]
+kbl(hedge.res, format="latex", booktabs=T, escape=F) %>%
+  kable_styling(latex_options=c("scale_down", "HOLD_position"))
+```
+
+## Lien avec l'ACP
+
+- Effectuer une ACP de la matrice de covariance des rendements.
+
+- Identifier un vecteur propre qui est un facteur d'arbitrage charactérisé
+
+- Faire le lien entre cette observation et les poids optimaux du modèle MV.
+
+```{r, echo=T}
+pc <- prcomp(cov(R))
+pc.res <- rbind(pc$rotation, pc$sdev)
+kbl(pc.res, booktabs=T, format="latex", digits=4) %>%
+  kable_styling(latex_options=c("scale_down", "HOLD_position")) %>%
+  pack_rows("Vecteurs propres", 1,10) %>%
+  pack_rows("Valeurs propres", 11,11)
+```
+
+Le vecteur propre 9 revèle une possibilité d'arbitrage entre GSPC et RUA. Effectivement, ces deux titres assez sont fortement représentés dans le portefeuille optimal. 
+
+
