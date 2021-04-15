@@ -1,0 +1,384 @@
+---
+title: "Gestion de Portefeuille"
+subtitle: "TP-7: Simulation d'une gestion selon un Budget Risque"
+author: Patrick Hénaff
+date: "Février-Mars 2020"
+output: 
+  pdf_document:
+    keep_tex: true
+    fig_caption: yes
+    latex_engine: pdflatex
+geometry: margin=1in
+header-includes:
+  - \usepackage[utf8]{inputenc}
+  - \usepackage{float}
+bibliography: ../../library.bib
+csl: ../../apa.csl
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+```
+
+```{r load-libraries, include=FALSE, echo=FALSE}
+library(quantmod)
+library(xts)
+library(hornpa)
+library(lubridate)
+library(xtable)
+library(PerformanceAnalytics)
+library(TTR)
+library(SuppDists)
+library(lubridate)
+library(roll)
+library(Hmisc)
+library(nFactors)
+library(quadprog)
+library(knitr)
+library(kableExtra)
+library(latex2exp)
+library(FFdownload)
+library(fPortfolio)
+library(BLCOP)
+library(mnormt)
+library(portfolioBacktest)
+library(riskParityPortfolio)
+
+get.src.folder <- function() {
+  path.expand("../GP/src")
+}
+
+get.data.folder <- function() {
+  path.expand("../GP/data")
+}
+
+source(file.path(get.src.folder(), 'utils.R'))
+source(file.path(get.src.folder(), 'FileUtils.R'))
+```
+
+L'objet de ce TP est de se familiariser avec les packages de "backtesting" disponibles dans R. pour cela, on propose de reproduire une analyse réalisée avec le package "riskParityPortfolio", mais en utilisant un nouveau jeu de données, et en portant quelques modifications à l'exemple proposé.
+
+
+# Question 1: Calcul du portefeuille tangent.
+
+Pour justifier la formulation utilisée dans la vignette, partons de la définition du ratio de Sharpe: le portefeuille tangent est obtenu par le programme (A):
+
+$$
+\begin{aligned}
+    & \mbox{max}_x \ \   f(x) = \frac{\mu^Tx - r_f}{\sqrt{x^T \Sigma x}} \\
+    \mbox{s.t.} & \\
+    & \mathbf{1}^T x = 1 \\
+    & x >= 0
+\end{aligned}
+$$
+Il s'agit de montrer que ce programme est équivalent au programme utilisé dans la vignette:
+$$
+\begin{aligned}
+    & \mbox{min}_y \ \   y^T \Sigma y \\
+    \mbox{s.t.} & \\
+    & \hat{\mu}^T y = 1 \\
+    & y \geq 0
+\end{aligned}
+$$
+
+On utilisera la formulation équivalente (B):
+$$
+\begin{aligned}
+    & \mbox{max}_y \ \   g(y) = \frac{1}{\sqrt{y^T \Sigma y}} \\
+    \mbox{s.t.} & \\
+    & \hat{\mu}^T y = 1 \\
+    & y \geq 0
+\end{aligned}
+$$
+
+Soit $y*$ la solution de (B') et $x*$ la solution de (A). Soit $\Omega_A$ et $\Omega_{B}$ les ensembles de solutions admissibles pour (A) et (B), respectivement. Pour montrer l'équivalence des programmes, on cherche une bijection $\phi$ telle que:
+$$
+\begin{aligned}
+& x \in \Omega_A \Leftrightarrow  \phi(x) \in \Omega_{B} \\
+& x^* \in \Omega_A \ \ \mbox{optimal pour (A)} \Leftrightarrow \phi(x^*) \in \Omega_{B} \ \ \mbox{optimal pour (B)}
+\end{aligned}
+$$
+Commençons par montrer les implications directes. On suppose
+
+$$
+\exists \  x \ | \ \hat{\mu}^T x > 0
+$$
+De ce fait, un point $x | \hat{\mu}^T x \leq 0$ ne peut pas être optimum. On peut donc sans perte de généralité restreindre les solutions admissibles à $\hat{\mu}^T x > 0$.
+
+Soit $x$ une solution admissible pour (A); $y = x/\hat{\mu}^Tx$ est toujours défini et est admissible pour le programme (B). Soit maintenant $x^*$ l'optimum de (A) et $\bar{y} = x/\hat{\mu}^Tx^*$ . On a $f(x^*) = g(\bar{y})$, avec $\bar{y}$ admissible mais pas nécessairement optimal. On en déduit que l'optimum de (B), $g(y^*)$ est supérieur à l'optimum de (A):
+$$
+g(y^*) \geq f(x^*)
+$$
+
+Procédons de même pour les réciproques. Soit $y$ une solution admissible pour (B). Alors,
+$$
+x = \frac{y}{\sum_j y_j}
+$$
+est admissible pour (A). Soit maintenant $y^*$ l'optimum de (B) et $\bar{x} = y^*/\sum y^*$ . On a $g(y^*) = f(\bar{x})$, avec $\bar{x}$ admissible mais pas nécessairement optimal. On en déduit que l'optimum de (A), $f(x^*)$ est supérieur à l'optimum de (B):
+$$
+f(x^*) \geq g(y^*)
+$$
+Ainsi, les deux optimum sont identiques et les programmes (A) et (B) sont équivalents. La contrainte $Ax \geq b$ est traitée de manière similaire.
+
+On note cependant que la formule programmée dans la vignette omet de prendre en compte le taux sans risque.
+
+# Question 2: Comparaison de diverses stratégies d'allocation, sans contraintes
+
+Pour les simulations historiques, on utilise les données hebdomadaires suivantes:
+
+```{r, eval=TRUE, echo=FALSE, warning=FALSE}
+daily.price.file <- "./daily.price.rda"
+load(daily.price.file)
+weekly.price <- daily.price[endpoints(daily.price, on="weeks", k=1),]
+tickers <- names(weekly.price)
+```
+
+
+```{r, eval=TRUE, echo=TRUE, warning=FALSE}
+kable(table.Stats(weekly.price), "latex", booktabs=T, caption="Univers des titres") %>% 
+  kable_styling(latex_options=c("scale_down", "HOLD_position"))
+```
+
+Le taux sans risque annualisé est fourni à une périodicité mensuelle:
+
+```{r, echo=TRUE}
+tmp <- read.csv("FEDFUNDS.csv", header=TRUE, sep=",")
+rf_rate <- xts(tmp$FEDFUNDS/100.0, date(tmp$DATE))
+colnames(rf_rate) <- "Rf"
+
+# fonction pour interpoler la valeur correspondant à une date
+get.rf <- function(dt) {
+ approx(x=index(rf_rate), y=rf_rate, xout=dt, rule=2)$y
+}
+```
+
+```{r, echo=FALSE}
+plot(rf_rate, main="Taux sans risque")
+```
+
+En suivant l'exemple donné dans la vignette "Risk Parity Portfolio", effectuer une simulation des stratégies suivantes, et commentez les résultats.
+
++ $1/N$
++ Portefeuille tangent
++ Portefeuille "risk parity"
+
+
+
+
+```{r}
+max_sharpe_ratio_rf <- function(dataset) {
+    prices <- dataset$adjusted
+    log_returns <- diff(log(prices))[-1]
+    N <- ncol(prices)
+    Sigma <- cov(log_returns)
+    mu <- colMeans(log_returns)
+    if (all(mu <= 1e-8))
+        return(rep(0, N))
+    # interpolate risk-free rate
+    r.f <- get.rf(last(index(log_returns)))/12
+    # r.f <- 0
+    Dmat <- 2 * Sigma
+    Amat <- diag(N)
+    Amat <- cbind(mu-r.f, Amat)
+    bvec <- c(1, rep(0, N))
+    dvec <- rep(0, N)
+    res <- solve.QP(Dmat = Dmat, dvec = dvec, Amat = Amat, bvec = bvec, meq = 1)
+    w <- res$solution
+    return(w/sum(w))
+}
+
+one_over_n <- function(dataset) {
+    N <- ncol(dataset$adjusted)
+    return(rep(1/N,N))
+}
+```
+```{r, echo=TRUE}
+# define portfolios to be backtested
+# risk parity portfolio
+risk_parity <- function(dataset) {
+  prices <- dataset$adjusted
+  log_returns <- diff(log(prices))[-1]
+  return(riskParityPortfolio(cov(log_returns))$w)
+}
+```
+```{r, echo=TRUE, warning=FALSE, message=FALSE}
+bt <- portfolioBacktest(list("uniform" = one_over_n,
+                             "risk parity portfolio" = risk_parity,
+                             "tangency portfolio"    = max_sharpe_ratio_rf),
+                        list(list(adjusted=weekly.price)),
+                        T_rolling_window = 12*4, 
+                        optimize_every = 3*4, rebalance_every = 3*4,
+                        show_progress_bar = FALSE)
+
+```
+
+
+
+Résumé des performances des trois styles de gestion:
+
+```{r, echo=FALSE}
+kable(backtestSummary(bt)$performance, "latex", booktabs=T, digits=3,
+      caption="Simulation des stratégies sans contraintes") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+```{r, fig.cap="Rendement cumulé", fig.pos="!H"}
+backtestChartCumReturns(bt)
+```
+
+```{r, fig.cap="Pertes par rapport au plus haut.", fig.pos="!H"}
+backtestChartDrawdown(bt)
+```
+
+
+```{r, fig.cap="Allocation Risk Parity", fig.pos="!H"}
+backtestChartStackedBar(bt, portfolio = "risk parity portfolio", legend = TRUE)
+
+```
+```{r, fig.cap="Allocation du portefeuille tangent", fig.pos="!H"}
+backtestChartStackedBar(bt, portfolio = "tangency portfolio" , legend = TRUE)
+```
+
+
+# Question 3: Comparaison de diverses stratégies d'allocation, avec contraintes de diversification
+
+Ajoutez les contraintes suivantes aux portefeuilles "risk parity" et "tangent", et exécutez les simulations de gestion. Comparez ces résultats aux simulations de la question 2.
+
+$$
+\begin{aligned}
+w_i & \leq 25\% \\
+w_{AAPL} + w_{MSFT} + w_{AMZN} & \leq 40\%
+\end{aligned}
+$$
+
+
+```{r, echo=TRUE, }
+rep.row<-function(x,n){
+  matrix(rep(x,each=n),nrow=n)
+}
+
+max_sharpe_ratio_rf_plus <- function(dataset) {
+    N = length(tickers)
+    ub = 0.25
+    techno <- c("AAPL", "AMZN", "MSFT")
+    ub.techno <- .4
+    prices <- dataset$adjusted
+    log_returns <- diff(log(prices))[-1]
+    N <- ncol(prices)
+    Sigma <- cov(log_returns)
+    mu <- colMeans(log_returns)
+    # interpolate risk-free rate
+    r.f <- get.rf(last(index(log_returns)))/12
+    Dmat <- 2 * Sigma
+    # w>0
+    A.diag <- diag(N)
+    # w techno
+    A.techno <- as.numeric(tickers %in% techno)
+    mu.hat <- mu-r.f
+    if (all(mu.hat <= 1e-8))
+        return(rep(0, N))
+    Amat.0 <- mu.hat
+    Amat.1 <- cbind(A.diag, 
+              -A.diag, 
+              -A.techno)
+    bvec <- c(rep(0, N), rep(-ub, N), -ub.techno)
+    Amat.1 <- Amat.1 - rep.row(bvec, N)
+    bvec <- c(1, rep(0, 2*N+1))
+    Amat <- cbind(Amat.0, Amat.1)
+    dvec <- rep(0, N)
+    
+    # program may not be feasible because of linear constraints
+    w <- tryCatch(
+  {res <- solve.QP(Dmat = Dmat, dvec = dvec, Amat = Amat, bvec = bvec, meq = 1)
+    w <- zapsmall(res$solution)
+    w <- w/sum(w)
+    names(w) <- tickers
+    w
+  },
+  error=function(cond) {
+    w <- rep(0,N)
+    names(w) <- tickers
+    w
+  }
+)
+}
+```
+
+
+
+```{r}
+techno <- c("AAPL", "AMZN", "MSFT")
+A.techno <- as.numeric(tickers %in% techno)
+ub.techno <- 0.4
+ub <- 0.25
+risk_parity_plus <- function(dataset) {
+     prices <- dataset$adjusted
+    log_returns <- diff(log(prices))[-1]
+    N <- ncol(prices)
+    Sigma <- cov(log_returns)
+    
+    res <- riskParityPortfolio(Sigma, w_ub=ub, Dmat=A.techno, dvec=ub.techno)
+    res$w
+}
+```
+
+Vérification des deux allocations, en utilisant l'ensemble des données:
+
+```{r}
+log_returns <- diff(log(weekly.price))[-1]
+Sigma <- cov(log_returns)
+dataset = list(adjusted=weekly.price)
+w.tangent = max_sharpe_ratio_rf_plus(dataset)
+res <- riskParityPortfolio(Sigma, w_ub=ub, Dmat=A.techno, dvec=ub.techno)
+w.risk_parity = res$w
+
+t <- data.frame(tg=w.tangent, rp=w.risk_parity)
+row.names(t) <- tickers
+kable(t, booktabs=T, col.names = c("Tangent", "Risk Parity"), 
+      caption="Allocation avec contraintes de diversification", digits=3) %>%
+kable_styling(latex_options = "HOLD_position")
+```
+
+```{r, echo=TRUE, message=FALSE}
+bt <- portfolioBacktest(
+  list("uniform" = one_over_n,
+       "risk parity portfolio" = risk_parity_plus,
+       "tangency portfolio" = max_sharpe_ratio_rf_plus),
+  list(list(adjusted=weekly.price)),
+  T_rolling_window = 12*4, 
+  optimize_every = 3*4, rebalance_every = 3*4,
+  show_progress_bar = FALSE)
+```
+
+```{r, echo=TRUE}
+kable(backtestSummary(bt)$performance, "latex", booktabs=T, digits=3,
+      caption="Simulation des stratégies avec contraintes de diversification") %>%
+  kable_styling(latex_options = "HOLD_position")
+```
+
+On note que le portefeuille tangent n'est pas investi durant la crise de 2008-2009 car les espérances de rendement des actifs risqués sont toutes négatives. Il n'y a pas de solution qui satisfasse les contraintes
+$$
+\begin{aligned}
+    w^T \mu & \geq r_f  \\
+    A^T w & \geq b \\
+    w & \geq  0
+\end{aligned}
+$$
+
+Les contraintes de diversification améliorent sensiblement les performances du portefeuille tangent, mai sont sans effet sur le portefeuille "risk parity" qui était déjà naturellement diversifié.
+
+```{r, fig.width=6, fig.cap="Composition du portefeuille tangent avec contraintes de diversification"}
+backtestChartStackedBar(bt, portfolio = "tangency portfolio" , 
+                        legend = TRUE)
+```
+
+
+```{r, fig.cap="Rendement cumulé avec contraintes de diversification"}
+backtestChartCumReturns(bt)
+```
+
